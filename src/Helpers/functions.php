@@ -157,7 +157,7 @@ function login_user(array $user): void
     setcookie('pmgz_token', $token, [
         'expires'  => time() + 60 * 60 * 24 * 30,
         'path'     => '/',
-        'secure'   => !empty($_SERVER['HTTPS']),
+        'secure'   => !empty($_SERVER['HTTPS']) || (defined('APP_ENV') && APP_ENV === 'production'),
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
