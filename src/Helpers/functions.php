@@ -172,7 +172,14 @@ function logout_user(): void
         Session::deleteByToken($token);
     }
 
-    setcookie('pmgz_token', '', time() - 3600, '/');
+    // 🔐 FIX: Clear the cookie with the exact same parameters used to set it
+    setcookie('pmgz_token', '', [
+        'expires'  => time() - 3600,
+        'path'     => '/',
+        'secure'   => !empty($_SERVER['HTTPS']) || (defined('APP_ENV') && APP_ENV === 'production'),
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
 
     // 🔐 CRITICAL FIX: Fully destroy the session state to prevent fixation
     unset($_SESSION['user_id'], $_SESSION['csrf']);
