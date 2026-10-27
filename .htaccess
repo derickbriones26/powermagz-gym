@@ -1,13 +1,17 @@
-RewriteEngine On
-RewriteBase /powermagz-gym/
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Set the base directory (adjust if your app is in a subfolder, but for Render it's usually just /)
+    RewriteBase /
 
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
+    # 1. If the request is for an actual file (like index.php, css, images), serve it directly.
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
 
-RewriteRule ^ index.php [L]
+    # 2. If the request is for router.php, serve it directly (to prevent loops if it exists)
+    RewriteRule ^router\.php$ - [L]
 
-<IfModule mod_headers.c>
-    Header set X-Content-Type-Options "nosniff"
-    Header set X-Frame-Options "SAMEORIGIN"
+    # 3. Otherwise, rewrite EVERYTHING to index.php
+    RewriteRule ^ index.php [L,QSA]
 </IfModule>
