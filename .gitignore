@@ -1,0 +1,17 @@
+.env
+.env.local
+.env.*.local
+ACTIVATE_MFA_OTP.md
+DEMO_ACCOUNTS.md
+
+vendor/
+.idea/
+.vscode/
+.DS_Store
+
+storage/logs/*
+!storage/logs/.gitkeep
+storage/backups/*
+!storage/backups/.gitkeep
+storage/uploads/*
+!storage/uploads/.gitkeep

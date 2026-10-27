@@ -1,0 +1,33 @@
+version: "3.9"
+services:
+  web:
+    image: php:8.2-apache
+    container_name: powermagz-web
+    ports: ["8000:80"]
+    volumes:
+      - ./:/var/www/html
+    depends_on: [db]
+    command: >
+      bash -c "a2enmod rewrite && docker-php-ext-install pdo pdo_mysql &&
+               apache2-foreground"
+    environment:
+      APP_ENV: local
+      APP_URL: http://localhost:8000
+      DB_HOST: db
+      DB_NAME: powermagz_gym
+      DB_USER: powermagz
+      DB_PASS: secret
+  db:
+    image: mysql:8
+    container_name: powermagz-db
+    ports: ["3307:3306"]
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: powermagz_gym
+      MYSQL_USER: powermagz
+      MYSQL_PASSWORD: secret
+    volumes:
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - db_data:/var/lib/mysql
+volumes:
+  db_data:

@@ -1,0 +1,270 @@
+/* ============================================================
+   PowerMagz — Dark Mode Overrides
+   Bulletproof version: uses attribute selectors so it works
+   regardless of Tailwind CDN class injection order.
+   ============================================================ */
+
+html.dark body {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+/* ---------- Backgrounds ---------- */
+html.dark .bg-white {
+  background-color: #1e293b !important;
+}
+html.dark .bg-white\/90 {
+  background-color: rgba(30, 41, 59, 0.9) !important;
+}
+html.dark .bg-white\/70 {
+  background-color: rgba(30, 41, 59, 0.7) !important;
+}
+html.dark .bg-gray-50 {
+  background-color: #0f172a !important;
+}
+html.dark .bg-gray-100 {
+  background-color: #1e293b !important;
+}
+html.dark .bg-gray-50\/50 {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* ---------- Text ---------- */
+html.dark .text-black {
+  color: #f1f5f9 !important;
+}
+html.dark .text-gray-700 {
+  color: #cbd5e1 !important;
+}
+html.dark .text-gray-600 {
+  color: #cbd5e1 !important;
+}
+html.dark .text-gray-500 {
+  color: #94a3b8 !important;
+}
+html.dark .text-gray-400 {
+  color: #64748b !important;
+}
+
+/* ---------- Borders ---------- */
+html.dark .border-gray-200 {
+  border-color: #334155 !important;
+}
+html.dark .border-gray-100 {
+  border-color: #1e293b !important;
+}
+html.dark .border-gray-50 {
+  border-color: #1e293b !important;
+}
+html.dark .border-black\/10 {
+  border-color: #334155 !important;
+}
+
+/* ---------- Shadows ---------- */
+html.dark .shadow-sm,
+html.dark .shadow-md,
+html.dark .shadow-lg,
+html.dark .shadow-xl,
+html.dark .shadow-2xl {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* ---------- Tables ---------- */
+html.dark table {
+  color: #e2e8f0;
+}
+html.dark thead tr {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* ---------- Inputs / forms ---------- */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #0f172a !important;
+  color: #e2e8f0 !important;
+  border-color: #334155 !important;
+}
+
+/* ---------- Sidebar stays black in both modes ---------- */
+html.dark aside.bg-black {
+  background-color: #000000 !important;
+}
+
+/* ---------- Primary CTA teal in both modes ---------- */
+html.dark .bg-\[\#00A6A6\] {
+  background-color: #00a6a6 !important;
+}
+
+/* ============================================================
+   HELP BOXES — attribute selectors (bulletproof)
+   Matches any element with BOTH classes regardless of order.
+   ============================================================ */
+
+/* Any element with class "bg-gradient-to-r" AND "from-gray-50" */
+html.dark [class~="bg-gradient-to-r"][class~="from-gray-50"] {
+  background-image: none !important;
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+/* Text inside help boxes */
+html.dark [class~="bg-gradient-to-r"][class~="from-gray-50"] .text-black {
+  color: #f1f5f9 !important;
+}
+html.dark [class~="bg-gradient-to-r"][class~="from-gray-50"] .text-gray-500 {
+  color: #94a3b8 !important;
+}
+html.dark [class~="bg-gradient-to-r"][class~="from-gray-50"] .text-gray-400 {
+  color: #64748b !important;
+}
+
+/* Buttons inside help boxes (bg-black + white text) */
+html.dark
+  [class~="bg-gradient-to-r"][class~="from-gray-50"]
+  a[class~="bg-black"],
+html.dark
+  [class~="bg-gradient-to-r"][class~="from-gray-50"]
+  button[class~="bg-black"] {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+html.dark
+  [class~="bg-gradient-to-r"][class~="from-gray-50"]
+  a[class~="bg-black"]:hover,
+html.dark
+  [class~="bg-gradient-to-r"][class~="from-gray-50"]
+  button[class~="bg-black"]:hover {
+  background-color: #00a6a6 !important;
+  color: #ffffff !important;
+}
+
+/* ---------- Help cards in partner pages ---------- */
+html.dark .bg-gradient-to-r.from-gray-50.to-white,
+html.dark [class*="from-gray-50"][class*="to-white"] {
+  background-image: none !important;
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+html.dark .bg-gradient-to-r.from-gray-50.to-white .text-black,
+html.dark [class*="from-gray-50"][class*="to-white"] .text-black {
+  color: #f1f5f9 !important;
+}
+
+html.dark .bg-gradient-to-r.from-gray-50.to-white .text-gray-500,
+html.dark [class*="from-gray-50"][class*="to-white"] .text-gray-500,
+html.dark .bg-gradient-to-r.from-gray-50.to-white .text-gray-400,
+html.dark [class*="from-gray-50"][class*="to-white"] .text-gray-400 {
+  color: #94a3b8 !important;
+}
+
+html.dark .bg-gradient-to-r.from-gray-50.to-white a.bg-black,
+html.dark .bg-gradient-to-r.from-gray-50.to-white button.bg-black,
+html.dark [class*="from-gray-50"][class*="to-white"] a.bg-black,
+html.dark [class*="from-gray-50"][class*="to-white"] button.bg-black {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+html.dark .bg-gradient-to-r.from-gray-50.to-white a.bg-black:hover,
+html.dark .bg-gradient-to-r.from-gray-50.to-white button.bg-black:hover,
+html.dark [class*="from-gray-50"][class*="to-white"] a.bg-black:hover,
+html.dark [class*="from-gray-50"][class*="to-white"] button.bg-black:hover {
+  background-color: #00a6a6 !important;
+  color: #ffffff !important;
+}
+
+/* ---------- Existing help box overrides ---------- */
+html.dark [class~="bg-gradient-to-r"][class~="from-gray-50"] {
+  background-image: none !important;
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+html.dark [class~="bg-gradient-to-r"][class~="from-gray-50"] .text-black {
+  color: #f1f5f9 !important;
+}
+html.dark [class~="bg-gradient-to-r"][class~="from-gray-50"] .text-gray-500 {
+  color: #94a3b8 !important;
+}
+html.dark [class~="bg-gradient-to-r"][class~="from-gray-50"] .text-gray-400 {
+  color: #64748b !important;
+}
+
+html.dark
+  [class~="bg-gradient-to-r"][class~="from-gray-50"]
+  a[class~="bg-black"],
+html.dark
+  [class~="bg-gradient-to-r"][class~="from-gray-50"]
+  button[class~="bg-black"] {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+html.dark
+  [class~="bg-gradient-to-r"][class~="from-gray-50"]
+  a[class~="bg-black"]:hover,
+html.dark
+  [class~="bg-gradient-to-r"][class~="from-gray-50"]
+  button[class~="bg-black"]:hover {
+  background-color: #00a6a6 !important;
+  color: #ffffff !important;
+}
+
+/* ============================================================
+   Partner type toggle (Coach / Supplier)
+   ============================================================ */
+
+/* Selected pill — sibling of the hidden radio input */
+html.dark input.peer:checked ~ div {
+  background-color: #0f172a !important;
+  color: #00a6a6 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Unselected pills */
+html.dark input.peer:not(:checked) ~ div {
+  color: #94a3b8 !important;
+}
+html.dark input.peer:not(:checked) ~ div:hover {
+  color: #e2e8f0 !important;
+}
+
+/* ============================================================
+   Auth page — back button dark mode
+   ============================================================ */
+html.dark .back-btn {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+html.dark .back-btn:hover {
+  background: #00a6a6 !important;
+  border-color: #00a6a6 !important;
+  color: #ffffff !important;
+}
+
+/* ============================================================
+   Google Maps — dark filter
+   ============================================================ */
+html.dark .map-iframe {
+  filter: invert(92%) hue-rotate(180deg) brightness(95%) contrast(90%);
+  -webkit-filter: invert(92%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+html.dark .map-wrapper,
+html.dark .map-outer {
+  border-color: #334155 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* ============================================================
+   Reduced motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  html.dark * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
