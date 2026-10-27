@@ -4,18 +4,18 @@
 mkdir -p /var/run/mysqld
 chown mysql:mysql /var/run/mysqld
 
-# 2. Start MariaDB in the background
+# 2. Start MariaDB in the background with limited memory (for Render Free Tier)
 echo "Starting MariaDB..."
-mysqld_safe &
+mysqld_safe --innodb-buffer-pool-size=32M --key-buffer-size=8M &
 
-# 3. WAIT until MariaDB is fully ready (instead of just sleeping 5 seconds)
+# 3. WAIT until MariaDB is fully ready
 until mysqladmin ping -h 127.0.0.1 --silent; do
     echo "Waiting for MariaDB to accept connections..."
     sleep 2
 done
 echo "MariaDB is up and running!"
 
-# 4. Create the database and user (Supports both localhost and TCP 127.0.0.1)
+# 4. Create the database and user
 mysql -u root -e "CREATE DATABASE IF NOT EXISTS powermagz_gym;"
 mysql -u root -e "CREATE USER IF NOT EXISTS 'powermagz'@'127.0.0.1' IDENTIFIED BY 'secret';"
 mysql -u root -e "CREATE USER IF NOT EXISTS 'powermagz'@'localhost' IDENTIFIED BY 'secret';"
@@ -30,5 +30,6 @@ if ! mysql -u root -e "USE powermagz_gym; SHOW TABLES;" | grep -q "users"; then
     echo "Database imported successfully!"
 fi
 
-# 6. Start Apache in the foreground (keeps the container alive)
+# 6. Start Apache in the foreground (Port is already set in Dockerfile)
+echo "Starting Apache..."
 apache2-foreground
