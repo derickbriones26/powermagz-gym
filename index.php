@@ -18,7 +18,7 @@ $router = new Router();
  |  #1.6    Inclusive Form & Data Entry
  |  #2.1    RBAC & Auth (MFA, idle, re-auth, audit)
  |  #2.2    Infrastructure / Settings
- | ================================================================== */
+ ================================================================== */
 
 
 /* ====================== PUBLIC ====================== */
@@ -175,16 +175,18 @@ $router->post('/admin-dashboard/settings',                  'AdminController@sav
 $router->get('/admin-dashboard/audit/export', 'AdminController@exportAuditLogs', ['auth', 'role:admin']);
 $router->post('/admin-dashboard/audit/purge', 'AdminController@purgeAuditLogs',  ['auth', 'role:admin']);
 
+
+/* ====================== API ====================== */
+$router->get('/api/occupancy',            'MemberController@occupancy');
+$router->get('/api/notifications',        'NotificationController@index',       ['auth']);
+$router->post('/api/notifications/read',  'NotificationController@markAllRead', ['auth']); // <-- NEW ROUTE ADDED HERE
+$router->get('/api/admin/occupancy',      'AdminController@liveOccupancy',      ['auth', 'role:admin,staff']);
+$router->get('/api/admin/kpis',           'AdminController@kpis',               ['auth', 'role:admin,staff']);
+
+
 /* ====================== ADMIN — NOTIFICATIONS ====================== */
 $router->post('/admin-dashboard/notifications/read',     'NotificationController@markRead',    ['auth']);
 $router->post('/admin-dashboard/notifications/read-all', 'NotificationController@markAllRead', ['auth']);
-
-
-/* ====================== API ====================== */
-$router->get('/api/occupancy',       'MemberController@occupancy');
-$router->get('/api/notifications',   'NotificationController@index',   ['auth']);
-$router->get('/api/admin/occupancy', 'AdminController@liveOccupancy',  ['auth', 'role:admin,staff']);
-$router->get('/api/admin/kpis',      'AdminController@kpis',           ['auth', 'role:admin,staff']);
 
 
 /* ====================== DISPATCH ====================== */

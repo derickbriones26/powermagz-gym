@@ -3,6 +3,9 @@ $user = current_user();
 $brandSub = $brandSub ?? 'PORTAL';
 $sections = $sections ?? [];
 
+/* Breadcrumb: parents pass "pageContext" (e.g. "Admin Dashboard") */
+$pageContext = $pageContext ?? '';
+
 $sessionWarning = function_exists('session_security_warning_data')
     ? session_security_warning_data()
     : null;
@@ -19,8 +22,10 @@ $needsMfaNudge = $user
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf" content="<?= csrf_token() ?>">
     <meta name="base" content="<?= e(base_path()) ?>">
-    <title><?= e($pageTitle ?? 'Portal') ?> — <?= APP_NAME ?></title>
+    <title><?= e($pageTitle ?? 'Portal') ?><?= $pageContext !== '' ? ' — ' . e($pageContext) : '' ?> — <?= APP_NAME ?></title>
     <link rel="icon" href="<?= url_e('/public/images/powermagz_gym.png') ?>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -219,7 +224,7 @@ $needsMfaNudge = $user
     ?>
 
     <!-- Mobile Overlay -->
-    <div id="sidebar-overlay" class="fixed inset-0 z-40 hidden bg-black/70 backdrop-blur-sm lg:hidden transition-opacity" onclick="toggleSidebarMobile()"></div>
+    <div id="sidebar-overlay" class="fixed inset-0 z-40 hidden overflow-hidden bg-black/70 backdrop-blur-sm lg:hidden transition-opacity" onclick="toggleSidebarMobile()"></div>
 
     <!-- Sidebar -->
     <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 flex w-64 flex-col sidebar-glass transition-transform duration-300 -translate-x-full lg:translate-x-0">
@@ -268,25 +273,33 @@ $needsMfaNudge = $user
     </aside>
 
     <!-- Main Content Wrapper -->
-    <div id="main-content" class="w-full min-h-screen transition-all duration-300 lg:pl-64 relative z-10 pb-24 lg:pb-0 overflow-x-hidden">
+    <div id="main-content" class="w-full min-h-screen transition-all duration-300 lg:pl-64 relative z-10 pb-24 lg:pb-0 overflow-x-hidden pt-16 sm:pt-20">
 
-        <!-- Topbar (Locked Layout) -->
-        <header class="sticky top-0 z-30 w-full topbar-glass">
+        <!-- Topbar -->
+        <header class="fixed top-0 right-0 left-0 lg:left-64 z-30 topbar-glass">
             <div class="mx-auto flex h-16 sm:h-20 w-full max-w-7xl flex-nowrap items-center justify-between px-4 sm:px-6 lg:px-8">
 
-                <!-- Left Side (Hamburger + Title) -->
+                <!-- Left Side: Hamburger + Breadcrumb + Title -->
                 <div class="flex items-center gap-3 flex-1 min-w-0 pr-2">
-                    <button type="button" onclick="toggleSidebarMobile()" class="lg:hidden flex-shrink-0 text-gray-400 hover:text-white p-1 -ml-1">
+                    <button type="button" onclick="toggleSidebarMobile()" class="lg:hidden flex-shrink-0 text-gray-400 hover:text-white p-1 -ml-1" aria-label="Open navigation menu" aria-controls="sidebar">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
-                    <div class="font-heading text-lg sm:text-2xl tracking-wide text-white truncate">
-                        <?= e($pageTitle ?? '') ?>
+
+                    <div class="min-w-0">
+                        <?php if ($pageContext !== ''): ?>
+                            <div class="hidden sm:block truncate text-[9px] font-bold uppercase tracking-[0.22em] text-gray-500 mb-0.5">
+                                <?= e($pageContext) ?>
+                            </div>
+                        <?php endif; ?>
+                        <div class="truncate font-heading text-lg tracking-wide text-white sm:text-2xl">
+                            <?= e($pageTitle ?? '') ?>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Right Side (Bell + Avatar) - EXPLICITLY FORCED TO ROW -->
+                <!-- Right Side: Notifications + Profile -->
                 <div class="flex flex-shrink-0 flex-nowrap items-center gap-2 sm:gap-4">
 
                     <!-- NOTIFICATION BELL -->

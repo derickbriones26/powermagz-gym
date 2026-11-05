@@ -3,14 +3,25 @@
 /**
  * Admin — Programs Tab (2026 UI)
  *
- * Receives: $data['programs']  (from Program::allWithStats())
+ * Receives from AdminController::dashboard():
+ *   $data['programs']     — Program::allWithStats($programFilters)
+ *   $data['programStats'] — statsSummary()
+ *   $data['programPopular'] — popularity()
+ *   $data['allProgramIds']  — Every program ID (unfiltered, for reordering)
+ *   $data['programFilters'] — active filter state
  */
 
 use App\Models\Program;
 
-$programs = $data['programs'] ?? [];
+$programs      = $data['programs']        ?? [];
+$allProgramIds = $data['allProgramIds']   ?? array_column($programs, 'id');
+$filters       = $data['programFilters']  ?? [
+    'status' => 'all',
+    'tier'   => 'all',
+    'search' => '',
+];
 
-/* Tier meta — SVG paths replacing emoji */
+/* Tier meta — SVG paths only, no emojis */
 $tierMeta = [
     'digital'  => [
         'svg'   => 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z',
@@ -83,6 +94,37 @@ if (!empty($programs)) {
 }
 
 $operationalFloor = Program::operationalCostFloor();
+
+/* ---- Query-string builder ---- */
+$qs = function (array $overrides = []) use ($filters): string {
+    $merged = array_merge([
+        'tab'         => 'programs',
+        'prog_status' => $filters['status'] === 'all' ? '' : $filters['status'],
+        'prog_tier'   => $filters['tier']   === 'all' ? '' : $filters['tier'],
+        'prog_q'      => $filters['search'],
+    ], $overrides);
+    $merged = array_filter($merged, fn($v) => $v !== '' && $v !== 'all');
+    return $merged ? '?' . http_build_query($merged) : '?tab=programs';
+};
+
+/* ---- Active chips ---- */
+$advancedCount = 0;
+$activeChips   = [];
+
+if ($filters['tier'] !== 'all') {
+    $advancedCount++;
+    $activeChips[] = [
+        'label' => 'Tier: ' . ucfirst($filters['tier']),
+        'clear' => $qs(['prog_tier' => '']),
+    ];
+}
+if ($filters['search'] !== '') {
+    $activeChips[] = [
+        'label' => 'Search: "' . $filters['search'] . '"',
+        'clear' => $qs(['prog_q' => '']),
+    ];
+}
+$hasAdvanced = $advancedCount > 0;
 ?>
 
 <div class="space-y-8 animate-[fade-in_0.4s_ease-out]">
@@ -120,7 +162,6 @@ $operationalFloor = Program::operationalCostFloor();
          KPI STRIP — 5 cards
          ============================================================ -->
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-
         <!-- Programs -->
         <div class="group relative overflow-hidden rounded-2xl border border-white/5 bg-[#111] p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#00A6A6]/40 hover:shadow-[0_10px_30px_-10px_rgba(0,166,166,0.2)]">
             <div class="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#00A6A6]/5 transition-transform duration-500 group-hover:scale-150"></div>
@@ -278,50 +319,170 @@ $operationalFloor = Program::operationalCostFloor();
     <!-- ============================================================
          FILTER BAR
          ============================================================ -->
-    <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-white/5 bg-[#111] p-5 shadow-sm">
+    <form method="get" action="<?= url_e('/admin-dashboard') ?>" id="programFilterForm"
+        class="overflow-hidden rounded-2xl border border-white/5 bg-[#111] shadow-sm">
 
-        <?= a11y_filter_open('Filter programs by tier and search') ?>
+        <input type="hidden" name="tab" value="programs">
 
-        <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Tier:</span>
+        <?= a11y_filter_open('Filter programs by status, tier, and search') ?>
 
-        <?php
-        $filters = [
-            ['all',      'All',      count($programs),        'M4 6h16M4 10h16M4 14h16M4 18h16'],
-            ['digital',  'Digital',  $tierCounts['digital'],  'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z'],
-            ['standard', 'Standard', $tierCounts['standard'], 'M13 10V3L4 14h7v7l9-11h-7z'],
-            ['premium',  'Premium',  $tierCounts['premium'],  'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z'],
-            ['b2b',      'B2B',      $tierCounts['b2b'],      'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z'],
-        ];
-        foreach ($filters as [$key, $label, $count, $icon]):
-        ?>
-            <button type="button"
-                data-tier-filter="<?= $key ?>"
-                onclick="setTierFilter('<?= $key ?>')"
-                aria-pressed="<?= $key === 'all' ? 'true' : 'false' ?>"
-                class="tier-filter filter-pill flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-gray-300 transition-all duration-300
-                       hover:border-[#00A6A6]/50 hover:text-white
-                       <?= $key === 'all' ? 'active' : '' ?>">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
-                </svg>
-                <span><?= $label ?></span>
-                <span class="rounded-full bg-black/30 px-2 py-0.5 text-[10px] font-bold text-gray-400"><?= $count ?></span>
-            </button>
-        <?php endforeach; ?>
-
-        <div class="ml-auto flex flex-wrap items-center gap-3">
-            <div class="relative w-full sm:w-64">
+        <!-- Toolbar: search + reset -->
+        <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:p-5">
+            <div class="relative flex-1">
                 <svg class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <input id="programSearch" type="search" placeholder="Search programs…"
-                    aria-label="Search programs by name"
+                <input type="search" name="prog_q" value="<?= e($filters['search']) ?>"
+                    placeholder="Search programs by name…"
                     class="h-11 w-full rounded-full border border-white/10 bg-[#0a0a0a] pl-11 pr-4 text-sm text-white placeholder-gray-600 outline-none transition-all focus:border-[#00A6A6] focus:ring-2 focus:ring-[#00A6A6]/20">
+            </div>
+
+            <?php if ($filters['search'] !== '' || $hasAdvanced): ?>
+                <a href="<?= url_e('/admin-dashboard?tab=programs') ?>"
+                    class="tap-effect inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 text-xs font-bold text-gray-300 transition-all hover:-translate-y-0.5 hover:border-[#D50000]/40 hover:text-white">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Reset
+                </a>
+            <?php endif; ?>
+        </div>
+
+        <!-- Primary facet: Status -->
+        <div class="border-t border-white/5 px-4 py-3 sm:px-5">
+            <div class="flex items-center gap-3">
+                <span class="shrink-0 text-[10px] font-bold uppercase tracking-widest text-gray-500">Status</span>
+                <div class="flex flex-1 gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
+                    <?php
+                    $statusFilters = [
+                        ['all',      'All',      'M4 6h16M4 10h16M4 14h16M4 18h16'],
+                        ['active',   'Active',   'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+                        ['inactive', 'Inactive', 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z'],
+                    ];
+                    foreach ($statusFilters as [$key, $label, $icon]):
+                        $isActive = ($filters['status'] === $key || ($key === 'all' && $filters['status'] === 'all'));
+                    ?>
+                        <a href="<?= url_e('/admin-dashboard' . $qs(['prog_status' => $key === 'all' ? '' : $key])) ?>"
+                            aria-current="<?= $isActive ? 'true' : 'false' ?>"
+                            class="filter-pill tap-effect inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all
+                                  <?= $isActive
+                                        ? 'border-[#00A6A6] bg-[#00A6A6] text-white shadow-[0_0_12px_rgba(0,166,166,0.35)]'
+                                        : 'border-white/10 bg-white/5 text-gray-300 hover:border-[#00A6A6]/50 hover:text-white' ?>">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
+                            </svg>
+                            <?= $label ?>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
             </div>
         </div>
 
+        <!-- Advanced filters (Tier) -->
+        <details class="group border-t border-white/5" <?= $hasAdvanced ? 'open' : '' ?>>
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02] sm:px-5">
+                <span class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    Advanced filters
+                    <?php if ($advancedCount > 0): ?>
+                        <span class="rounded-full bg-[#00A6A6]/15 px-2 py-0.5 text-[10px] font-bold text-[#00A6A6]">
+                            <?= $advancedCount ?> active
+                        </span>
+                    <?php endif; ?>
+                </span>
+                <svg class="program-adv-chevron h-4 w-4 text-gray-500 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </summary>
+
+            <div class="space-y-4 border-t border-white/5 bg-[#0a0a0a]/30 px-4 py-4 sm:px-5">
+                <div>
+                    <div class="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">Tier</div>
+                    <div class="flex flex-wrap gap-2">
+                        <?php
+                        $tierFilters = [
+                            ['all',      'All',      'M4 6h16M4 10h16M4 14h16M4 18h16',   count($programs)],
+                            ['digital',  'Digital',  'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z', $tierCounts['digital']],
+                            ['standard', 'Standard', 'M13 10V3L4 14h7v7l9-11h-7z',       $tierCounts['standard']],
+                            ['premium',  'Premium',  'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z', $tierCounts['premium']],
+                            ['b2b',      'B2B',      'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z', $tierCounts['b2b']],
+                        ];
+                        foreach ($tierFilters as [$key, $label, $icon, $count]):
+                            $isActive = ($filters['tier'] === $key || ($key === 'all' && $filters['tier'] === 'all'));
+                        ?>
+                            <a href="<?= url_e('/admin-dashboard' . $qs(['prog_tier' => $key === 'all' ? '' : $key])) ?>"
+                                aria-current="<?= $isActive ? 'true' : 'false' ?>"
+                                class="filter-pill inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all
+                                      <?= $isActive
+                                            ? 'border-[#00A6A6] bg-[#00A6A6] text-white'
+                                            : 'border-white/10 bg-white/5 text-gray-300 hover:border-[#00A6A6]/50 hover:text-white' ?>">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
+                                </svg>
+                                <?= $label ?>
+                                <span class="rounded-full bg-black/25 px-1.5 text-[10px] font-bold <?= $isActive ? 'text-white' : 'text-gray-400' ?>">
+                                    <?= $count ?>
+                                </span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <div class="flex flex-col-reverse gap-2 border-t border-white/5 pt-4 sm:flex-row sm:justify-end">
+                    <a href="<?= url_e('/admin-dashboard?tab=programs') ?>"
+                        class="inline-flex h-11 items-center justify-center rounded-full border border-white/10 bg-transparent px-6 text-sm font-bold text-gray-300 transition-colors hover:bg-white/5 hover:text-white">
+                        Reset
+                    </a>
+                    <button type="submit"
+                        class="tap-effect inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#00A6A6] px-6 text-sm font-bold text-white shadow-[0_0_15px_rgba(0,166,166,0.3)] transition-all hover:-translate-y-0.5 hover:bg-[#008c8c]">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                        Apply filters
+                    </button>
+                </div>
+            </div>
+        </details>
+
         <?= a11y_filter_close() ?>
-    </div>
+
+        <!-- Active chips + live count -->
+        <?php if (!empty($activeChips)): ?>
+            <div class="flex flex-wrap items-center gap-2 border-t border-white/5 px-4 py-3 sm:px-5">
+                <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Active</span>
+                <?php foreach ($activeChips as $chip): ?>
+                    <a href="<?= url_e('/admin-dashboard' . $chip['clear']) ?>"
+                        class="group inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-gray-300 transition-all hover:border-[#D50000]/40 hover:bg-[#D50000]/10 hover:text-white"
+                        aria-label="Remove filter <?= e($chip['label']) ?>">
+                        <?= e($chip['label']) ?>
+                        <svg class="h-3 w-3 text-gray-500 transition-colors group-hover:text-[#D50000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </a>
+                <?php endforeach; ?>
+                <a href="<?= url_e('/admin-dashboard?tab=programs') ?>"
+                    class="ml-auto text-[11px] font-bold text-[#00A6A6] transition-colors hover:text-white">
+                    Clear all
+                </a>
+            </div>
+        <?php endif; ?>
+
+        <!-- Live result count -->
+        <div class="flex items-center justify-between border-t border-white/5 px-4 py-2.5 text-xs text-gray-400 sm:px-5">
+            <span <?= a11y_live_region('polite') ?>>
+                <strong class="text-white"><?= count($programs) ?></strong>
+                program<?= count($programs) !== 1 ? 's' : '' ?>
+                <?= ($filters['search'] !== '' || $hasAdvanced) ? 'match the active filters' : 'total' ?>
+            </span>
+            <?php if ($filters['search'] !== '' || $hasAdvanced): ?>
+                <a href="<?= url_e('/admin-dashboard?tab=programs') ?>" class="font-bold text-[#00A6A6] transition-colors hover:text-white">
+                    Reset view
+                </a>
+            <?php endif; ?>
+        </div>
+    </form>
 
     <!-- ============================================================
          PROGRAM CARDS
@@ -333,14 +494,14 @@ $operationalFloor = Program::operationalCostFloor();
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
             </div>
-            <h3 class="mt-6 font-heading text-2xl tracking-wide text-white">NO PROGRAMS YET</h3>
-            <p class="mt-2 text-sm text-gray-400">Click "Add Program" to create your first membership tier.</p>
+            <h3 class="mt-6 font-heading text-2xl tracking-wide text-white">NO PROGRAMS FOUND</h3>
+            <p class="mt-2 text-sm text-gray-400">Click "Add Program" to create your first membership tier, or clear your filters.</p>
             <button type="button" onclick="openProgramModal()"
                 class="tap-effect mt-6 inline-flex items-center gap-2 rounded-full bg-[#00A6A6] px-6 py-3 text-sm font-bold text-white shadow-[0_0_15px_rgba(0,166,166,0.3)] transition-all hover:-translate-y-0.5 hover:bg-[#008c8c]">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
-                Create First Program
+                Create Program
             </button>
         </div>
     <?php else: ?>
@@ -353,7 +514,6 @@ $operationalFloor = Program::operationalCostFloor();
                 $isPopular = ($most && $most['id'] === $p['id'] && (int)($most['active_enrollments'] ?? 0) > 0);
                 $isLeast   = ($least && $least['id'] === $p['id']);
 
-                $customIcon   = $p['icon'] ?? '';
                 $features     = Program::featuresList($p['features'] ?? null);
                 $activeEnroll = (int)($p['active_enrollments'] ?? 0);
                 $pendingEnroll = (int)($p['pending_enrollments'] ?? 0);
@@ -370,8 +530,6 @@ $operationalFloor = Program::operationalCostFloor();
                             : ($isActive
                                 ? 'border-white/5 hover:border-[#00A6A6]/50 hover:shadow-[#00A6A6]/20'
                                 : 'border-white/5 opacity-60 hover:opacity-100') ?>"
-                    data-tier="<?= e($t) ?>"
-                    data-search="<?= e(strtolower($p['name'] ?? '')) ?>"
                     data-id="<?= e($p['id']) ?>"
                     style="animation: card-enter 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) <?= min($idx * 60, 360) ?>ms backwards;">
 
@@ -428,17 +586,13 @@ $operationalFloor = Program::operationalCostFloor();
                         <?php endif; ?>
                     </div>
 
-                    <!-- Icon + name -->
+                    <!-- Icon + name (🚀 Emoji-free: strictly SVG now) -->
                     <div class="mt-6 flex items-start gap-4">
-                        <div class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl text-3xl transition-all duration-300 group-hover:rotate-6 group-hover:scale-110"
+                        <div class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl transition-all duration-300 group-hover:rotate-6 group-hover:scale-110"
                             style="background-color: <?= $meta['color'] ?>1A; color: <?= $meta['color'] ?>;">
-                            <?php if ($customIcon !== ''): ?>
-                                <span aria-hidden="true"><?= e($customIcon) ?></span>
-                            <?php else: ?>
-                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $meta['svg'] ?>" />
-                                </svg>
-                            <?php endif; ?>
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $meta['svg'] ?>" />
+                            </svg>
                         </div>
                         <div class="min-w-0">
                             <div class="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-500">
@@ -635,19 +789,10 @@ $operationalFloor = Program::operationalCostFloor();
                 </div>
             <?php endforeach; ?>
         </div>
-
-        <div id="noProgramResults" class="hidden rounded-2xl border border-dashed border-white/10 bg-[#111] p-12 text-center">
-            <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/5 text-gray-500">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-            </div>
-            <p class="mt-4 text-sm text-gray-400">No programs match this filter.</p>
-        </div>
     <?php endif; ?>
 
     <!-- ============================================================
-         ADD / EDIT MODAL — with ₱ prefix + min="0.01"
+         ADD / EDIT MODAL
          ============================================================ -->
     <div id="programModal" role="dialog" aria-modal="true" aria-labelledby="programModalTitle"
         class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-4 backdrop-blur-md">
@@ -711,13 +856,14 @@ $operationalFloor = Program::operationalCostFloor();
                     </label>
 
                     <label class="block">
-                        <span class="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-500">Icon / Emoji</span>
-                        <input name="icon" id="pm-icon" maxlength="8" placeholder="Auto"
-                            class="h-12 w-full rounded-xl border border-white/10 bg-[#0a0a0a] px-4 text-center text-xl text-white placeholder-gray-600 outline-none transition-all focus:border-[#00A6A6] focus:ring-2 focus:ring-[#00A6A6]/20">
+                        <span class="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-500">Icon (optional)</span>
+                        <input name="icon" id="pm-icon" maxlength="8" placeholder="Leave blank for default"
+                            class="h-12 w-full rounded-xl border border-white/10 bg-[#0a0a0a] px-4 text-center text-sm text-white placeholder-gray-600 outline-none transition-all focus:border-[#00A6A6] focus:ring-2 focus:ring-[#00A6A6]/20">
+                        <span class="mt-2 block text-[11px] text-gray-500">Modern SVG icons are used by default.</span>
                     </label>
                 </div>
 
-                <!-- Price + Duration — PESO FIX APPLIED -->
+                <!-- Price + Duration -->
                 <div class="grid gap-4 sm:grid-cols-2">
                     <label class="block">
                         <span class="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-500">
@@ -977,6 +1123,19 @@ $operationalFloor = Program::operationalCostFloor();
         overflow: hidden;
     }
 
+    /* Details marker hiding + chevron rotation */
+    #programFilterForm summary::-webkit-details-marker {
+        display: none;
+    }
+
+    #programFilterForm summary {
+        list-style: none;
+    }
+
+    #programFilterForm details[open] .program-adv-chevron {
+        transform: rotate(180deg);
+    }
+
     @media (prefers-reduced-motion: reduce) {
 
         .program-card,
@@ -992,53 +1151,11 @@ $operationalFloor = Program::operationalCostFloor();
     (function() {
         'use strict';
 
-        const PROGRAM_IDS = <?= json_encode(array_column($programs, 'id')) ?>;
+        // 🚀 Reorder logic uses the full unfiltered list so it doesn't corrupt
+        // the sort order of hidden programs when filtering is active.
+        let PROGRAM_IDS = <?= json_encode($allProgramIds) ?>;
         const CSRF = document.querySelector('meta[name="csrf"]')?.content || '';
         const BASE = document.querySelector('meta[name="base"]')?.content || '';
-
-        /* ============ Filter + search ============ */
-        let currentTierFilter = 'all';
-        let currentSearch = '';
-
-        window.setTierFilter = function(tier) {
-            currentTierFilter = tier;
-            document.querySelectorAll('[data-tier-filter]').forEach(btn => {
-                const active = btn.dataset.tierFilter === tier;
-                btn.classList.toggle('active', active);
-                btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-            });
-            applyFilters();
-        };
-
-        document.getElementById('programSearch')?.addEventListener('input', (e) => {
-            currentSearch = e.target.value.toLowerCase().trim();
-            applyFilters();
-        });
-
-        function applyFilters() {
-            const cards = document.querySelectorAll('#programGrid .program-card');
-            let visible = 0;
-
-            cards.forEach(card => {
-                const tier = card.dataset.tier || 'standard';
-                const search = card.dataset.search || '';
-
-                const okTier = currentTierFilter === 'all' || tier === currentTierFilter;
-                const okSearch = currentSearch === '' || search.includes(currentSearch);
-
-                if (okTier && okSearch) {
-                    card.style.display = '';
-                    visible++;
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-
-            const noResults = document.getElementById('noProgramResults');
-            if (noResults) {
-                noResults.classList.toggle('hidden', visible > 0 || cards.length === 0);
-            }
-        }
 
         /* ============ Feature toggle ============ */
         window.toggleFeatures = function(btn) {

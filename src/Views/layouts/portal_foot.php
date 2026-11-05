@@ -35,7 +35,7 @@
 
 <!-- Global Scripts -->
 <script src="<?= url_e('/public/js/app.js') ?>"></script>
-<script src="<?= url_e('/public/js/notifications.js') ?>"></script>
+<script src="<?= url_e('/public/js/notifications.js?v=' . filemtime(BASE_PATH . '/public/js/notifications.js')) ?>"></script>
 <script src="<?= url_e('/public/js/a11y.js') ?>"></script>
 
 <!-- Offline Tracker & Service Worker -->

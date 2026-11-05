@@ -197,7 +197,7 @@ $dowLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 
                         Streak
                     </div>
                     <div class="mt-2 font-heading text-4xl text-white">
-                        <?= $streak ?><span class="text-2xl ml-1">🔥</span>
+                        <?= $streak ?><span class="text-2xl ml-1"></span>
                     </div>
                     <div class="mt-1 text-xs text-gray-400">
                         <?= $streak === 0 ? 'Start today!' : ($streak === 1 ? 'day in a row' : 'days in a row') ?>

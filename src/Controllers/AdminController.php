@@ -18,6 +18,20 @@ class AdminController extends Controller
     /* =============================================================
      |  DASHBOARD
      ============================================================= */
+    private const ADMIN_TAB_LABELS = [
+        'overview'    => 'Overview',
+        'members'     => 'Members',
+        'programs'    => 'Programs & Tiers',
+        'enrollments' => 'Enrollments',
+        'payments'    => 'Payments',
+        'payouts'     => 'Partner Payouts',
+        'live'        => 'Live Time In/Out',
+        'analytics'   => 'Analytics',
+        'settings'    => 'System Settings',
+        'qr'          => 'QR Codes',
+        'partners'    => 'Partners',
+        'audit'       => 'Audit Log',
+    ];
 
     public function dashboard(): void
     {
@@ -98,6 +112,13 @@ class AdminController extends Controller
             'limit'           => 500,
         ];
 
+        /* ---- Program filters (NEW) ---- */
+        $programFilters = [
+            'status' => $_GET['prog_status'] ?? 'all',
+            'tier'   => $_GET['prog_tier']   ?? 'all',
+            'search' => $_GET['prog_q']      ?? '',
+        ];
+
         $enrollments = Enrollment::allWithStats();
         $enrollEvents = Enrollment::eventsForMany(array_column($enrollments, 'id'), 50);
 
@@ -111,8 +132,9 @@ class AdminController extends Controller
             'enrollTierCounts' => Enrollment::tierCounts(),
             'enrollTrends'     => Enrollment::trends12m(),
 
-            /* Programs */
-            'programs'         => Program::allWithStats(),
+            /* Programs (UPDATED) */
+            'programs'         => Program::allWithStats($programFilters),
+            'allProgramIds'    => array_column(Program::all('sort_order ASC', 5000), 'id'),
             'programStats'     => Program::statsSummary(),
             'programPopular'   => Program::popularity(),
 
@@ -162,11 +184,18 @@ class AdminController extends Controller
             'salesFilters'        => $salesFilters,
             'payoutFilters'       => $payoutFilters,
             'clientFilters'       => $clientFilters,
+            'programFilters'      => $programFilters,   // ← NEW
         ];
+
+        $tabLabel = self::ADMIN_TAB_LABELS[$tab] ?? 'Admin Dashboard';
 
         $this->view(
             'admin/dashboard',
-            ['pageTitle' => 'Admin Dashboard', 'tab' => $tab, 'data' => $data],
+            [
+                'pageTitle' => $tabLabel,
+                'tab'       => $tab,
+                'data'      => $data,
+            ],
             'portal'
         );
     }

@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Config\Database;
 use App\Models\Payment;
 use App\Models\Enrollment;
 use App\Models\PartnerSale;
@@ -10,135 +11,136 @@ use App\Models\PayoutRequest;
 
 class NotificationController extends Controller
 {
+    /* ============================================================
+       GET /api/notifications
+       Returns only UNREAD notifications for the bell dropdown.
+       ============================================================ */
     public function index(): void
     {
         $user = current_user();
         if (!$user) {
-            $this->json(['items' => []]);
+            $this->json(['items' => [], 'unread_count' => 0]);
             return;
         }
 
-        $items = match ($user['role']) {
-            'admin'   => $this->forAdmin(),
-            'partner' => $this->forPartner($user),
-            default   => $this->forMember($user),
-        };
+        $items = [];
+        $unreadCount = 0;
 
-        $this->json(['items' => $items]);
+        // 🔐 Fetch unread notifications from the database
+        try {
+            $stmt = Database::pdo()->prepare("
+                SELECT * FROM `notifications`
+                WHERE `user_id` = ? AND `read_at` IS NULL
+                ORDER BY `created_date` DESC
+                LIMIT 20
+            ");
+            $stmt->execute([$user['id']]);
+            $items = $stmt->fetchAll();
+
+            // Count all unread (for the badge)
+            $stmtCount = Database::pdo()->prepare("
+                SELECT COUNT(*) FROM `notifications`
+                WHERE `user_id` = ? AND `read_at` IS NULL
+            ");
+            $stmtCount->execute([$user['id']]);
+            $unreadCount = (int)$stmtCount->fetchColumn();
+        } catch (\Throwable $e) {
+            error_log('[NotificationController::index] ' . $e->getMessage());
+        }
+
+        // If no database notifications exist, fall back to dynamic alerts
+        // (e.g., pending payments that haven't been saved as notifications yet)
+        if (empty($items)) {
+            $dynamicAlerts = $this->getDynamicAlerts($user);
+            $items = $dynamicAlerts;
+            $unreadCount = count($dynamicAlerts);
+        }
+
+        $this->json([
+            'items' => $items,
+            'unread_count' => $unreadCount
+        ]);
     }
 
-    /* ---------------- ADMIN ---------------- */
-    private function forAdmin(): array
+    /* ============================================================
+       POST /api/notifications/read
+       Marks all notifications for the current user as read.
+       ============================================================ */
+    public function markAllRead(): void
+    {
+        csrf_verify();
+        $user = current_user();
+
+        if (!$user) {
+            $this->json(['status' => 'error'], 401);
+            return;
+        }
+
+        try {
+            $stmt = Database::pdo()->prepare("
+                UPDATE `notifications`
+                SET `read_at` = NOW()
+                WHERE `user_id` = ? AND `read_at` IS NULL
+            ");
+            $stmt->execute([$user['id']]);
+
+            $this->json(['status' => 'success']);
+        } catch (\Throwable $e) {
+            error_log('[NotificationController::markAllRead] ' . $e->getMessage());
+            $this->json(['status' => 'error'], 500);
+        }
+    }
+
+    /* ============================================================
+       Helper: Generate dynamic alerts (not stored in DB)
+       ============================================================ */
+    private function getDynamicAlerts(array $user): array
     {
         $items = [];
 
-        $payments = Payment::where(['status' => 'pending']);
-        if (count($payments)) {
-            $n = count($payments);
-            $items[] = [
-                'tone'  => 'warn',
-                'title' => "$n payment" . ($n > 1 ? 's' : '') . " awaiting confirmation",
-                'desc'  => 'Open the Payments tab to confirm member GCash payments.',
-            ];
-        }
-
-        $sales = PartnerSale::where(['status' => 'pending']);
-        if (count($sales)) {
-            $n = count($sales);
-            $items[] = [
-                'tone'  => 'warn',
-                'title' => "$n partner sale" . ($n > 1 ? 's' : '') . " to review",
-                'desc'  => 'Open the Payouts tab to approve logged sales.',
-            ];
-        }
-
-        $payouts = PayoutRequest::where(['status' => 'pending']);
-        if (count($payouts)) {
-            $n = count($payouts);
-            $items[] = [
-                'tone'  => 'warn',
-                'title' => "$n payout request" . ($n > 1 ? 's' : '') . " pending",
-                'desc'  => 'Partners are waiting for their payouts.',
-            ];
-        }
-
-        return $items;
-    }
-
-    /* ---------------- MEMBER ---------------- */
-    private function forMember(array $user): array
-    {
-        $items = [];
-
-        $payments = Payment::where(['user_id' => $user['id'], 'status' => 'pending']);
-        foreach ($payments as $p) {
-            $label = $p['description'] ?: ($p['tier'] ?: 'Membership');
-            $items[] = [
-                'tone'  => 'info',
-                'title' => 'Payment awaiting confirmation',
-                'desc'  => $label . ' — ' . peso($p['amount']) . ". We'll activate your enrollment once confirmed.",
-            ];
-        }
-
-        $active = Enrollment::where(['user_id' => $user['id'], 'status' => 'active']);
-        foreach ($active as $e) {
-            if (empty($e['end_date'])) continue;
-            $days = (int)ceil((strtotime($e['end_date']) - time()) / 86400);
-            if ($days >= 0 && $days <= 3) {
-                $label = $e['program_name'] ?: 'Your membership';
-                $when  = $days === 0 ? 'today' : "in {$days} day" . ($days > 1 ? 's' : '');
+        if ($user['role'] === 'admin') {
+            $payments = Payment::where(['status' => 'pending']);
+            if (count($payments)) {
                 $items[] = [
-                    'tone'  => 'warn',
-                    'title' => 'Membership expiring soon',
-                    'desc'  => "{$label} expires {$when} — renew on the Programs page.",
+                    'id' => 'dyn_payment_' . uniqid(),
+                    'tone' => 'warn',
+                    'title' => count($payments) . ' payment' . (count($payments) > 1 ? 's' : '') . ' awaiting confirmation',
+                    'description' => 'Open the Payments tab to confirm member GCash payments.',
+                    'link' => '/admin-dashboard?tab=payments'
                 ];
             }
-        }
-
-        $balance = 0;
-        foreach (Enrollment::where(['user_id' => $user['id']]) as $e) {
-            if (in_array($e['status'], ['active', 'pending'], true)) {
-                $balance += (float)$e['balance'];
-            }
-        }
-        if ($balance > 0) {
-            $items[] = [
-                'tone'  => 'warn',
-                'title' => 'Outstanding balance',
-                'desc'  => 'You have ' . peso($balance) . ' in dues. Settle at the front desk or via GCash.',
-            ];
-        }
-
-        return $items;
-    }
-
-    /* ---------------- PARTNER ---------------- */
-    private function forPartner(array $user): array
-    {
-        $items = [];
-
-        $sales = PartnerSale::where(['partner_user_id' => $user['id'], 'status' => 'pending']);
-        foreach ($sales as $s) {
-            $items[] = [
-                'tone'  => 'info',
-                'title' => 'Sale awaiting approval',
-                'desc'  => ($s['description'] ?: 'Sale') . ' — ' . peso($s['amount']) . ' awaiting gym confirmation.',
-            ];
-        }
-
-        $payouts = PayoutRequest::where(['partner_user_id' => $user['id']]);
-        foreach ($payouts as $p) {
-            if ($p['status'] === 'pending') {
+            $sales = PartnerSale::where(['status' => 'pending']);
+            if (count($sales)) {
                 $items[] = [
-                    'tone'  => 'info',
-                    'title' => 'Payout pending',
-                    'desc'  => 'Your ' . peso($p['amount']) . ' payout request is awaiting approval.',
+                    'id' => 'dyn_sale_' . uniqid(),
+                    'tone' => 'warn',
+                    'title' => count($sales) . ' partner sale' . (count($sales) > 1 ? 's' : '') . ' to review',
+                    'description' => 'Open the Payouts tab to approve logged sales.',
+                    'link' => '/admin-dashboard?tab=payouts'
                 ];
-            } elseif ($p['status'] === 'approved') {
+            }
+        } elseif ($user['role'] === 'partner') {
+            $sales = PartnerSale::where(['partner_user_id' => $user['id'], 'status' => 'pending']);
+            foreach ($sales as $s) {
                 $items[] = [
-                    'tone'  => 'success',
-                    'title' => 'Payout approved',
-                    'desc'  => peso($p['amount']) . ' has been approved and sent.',
+                    'id' => 'dyn_sale_' . $s['id'],
+                    'tone' => 'info',
+                    'title' => 'Sale awaiting approval',
+                    'description' => ($s['description'] ?: 'Sale') . ' — ' . peso($s['amount']) . ' awaiting gym confirmation.',
+                    'link' => '/partner-dashboard/sales'
+                ];
+            }
+        } else {
+            // Member
+            $payments = Payment::where(['user_id' => $user['id'], 'status' => 'pending']);
+            foreach ($payments as $p) {
+                $label = $p['description'] ?: ($p['tier'] ?: 'Membership');
+                $items[] = [
+                    'id' => 'dyn_pay_' . $p['id'],
+                    'tone' => 'info',
+                    'title' => 'Payment awaiting confirmation',
+                    'description' => $label . ' — ' . peso($p['amount']) . ". We'll activate your enrollment once confirmed.",
+                    'link' => '/payments'
                 ];
             }
         }

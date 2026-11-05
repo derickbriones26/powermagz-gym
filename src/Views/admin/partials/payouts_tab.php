@@ -96,6 +96,32 @@ $qsPayouts = function (array $overrides = []) use ($pFilters): string {
     return $merged ? '?' . http_build_query($merged) : '?tab=payouts';
 };
 
+/* ---- Sales Filter logic ---- */
+$sAdvancedCount = 0;
+$sActiveChips = [];
+
+if ($sFilters['type'] !== 'all') {
+    $sAdvancedCount++;
+    $sActiveChips[] = ['label' => 'Type: ' . ucfirst(str_replace('_', ' ', $sFilters['type'])), 'clear' => $qsSales(['s_type' => ''])];
+}
+if ($sFilters['search'] !== '') {
+    $sActiveChips[] = ['label' => 'Search: "' . $sFilters['search'] . '"', 'clear' => $qsSales(['s_q' => ''])];
+}
+$hasSAdvanced = $sAdvancedCount > 0;
+
+/* ---- Payouts Filter logic ---- */
+$pAdvancedCount = 0;
+$pActiveChips = [];
+
+if ($pFilters['method'] !== 'all') {
+    $pAdvancedCount++;
+    $pActiveChips[] = ['label' => 'Method: ' . ucfirst(str_replace('_', ' ', $pFilters['method'])), 'clear' => $qsPayouts(['po_method' => ''])];
+}
+if ($pFilters['search'] !== '') {
+    $pActiveChips[] = ['label' => 'Search: "' . $pFilters['search'] . '"', 'clear' => $qsPayouts(['po_q' => ''])];
+}
+$hasPAdvanced = $pAdvancedCount > 0;
+
 /* Method SVG */
 $methodSvg = [
     'gcash'         => 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z',
@@ -140,7 +166,6 @@ $methodSvg = [
          KPI STRIP
          ============================================================ -->
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-
         <!-- Total Sales -->
         <div class="group relative overflow-hidden rounded-2xl border border-white/5 bg-[#111] p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#00A6A6]/40 hover:shadow-[0_10px_30px_-10px_rgba(0,166,166,0.2)]">
             <div class="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#00A6A6]/5 transition-transform duration-500 group-hover:scale-150"></div>
@@ -272,9 +297,8 @@ $methodSvg = [
     <!-- ============================================================
          PARTNER SALES SECTION
          ============================================================ -->
-    <section role="region" aria-label="Partner sales">
-
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+    <section role="region" aria-label="Partner sales" class="space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
                 <h2 class="font-heading text-3xl tracking-wide text-white">PARTNER SALES</h2>
                 <p class="mt-1 text-sm text-gray-400">
@@ -283,60 +307,124 @@ $methodSvg = [
             </div>
         </div>
 
-        <!-- Sales filter bar -->
-        <div class="rounded-2xl border border-white/5 bg-[#111] p-5 shadow-sm space-y-3">
+        <!-- Sales Filter Bar -->
+        <form method="get" action="<?= url_e('/admin-dashboard') ?>" id="salesFilterForm" class="overflow-hidden rounded-2xl border border-white/5 bg-[#111] shadow-sm">
+            <input type="hidden" name="tab" value="payouts">
             <?= a11y_filter_open('Filter partner sales by status and type') ?>
 
-            <div class="flex flex-wrap items-center gap-2">
-                <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Status:</span>
-
-                <?php
-                $saleStatusFilters = [
-                    ['all',      'All',      (int)($saleSum['total']    ?? 0), 'M4 6h16M4 10h16M4 14h16M4 18h16'],
-                    ['pending',  'Pending',  (int)($saleSum['pending']  ?? 0), 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
-                    ['approved', 'Approved', (int)($saleSum['approved'] ?? 0), 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
-                    ['rejected', 'Rejected', (int)($saleSum['rejected'] ?? 0), 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'],
-                ];
-                foreach ($saleStatusFilters as [$key, $label, $count, $icon]):
-                    $isActive = ($sFilters['status'] === $key || ($key === 'all' && $sFilters['status'] === 'all'));
-                ?>
-                    <a href="<?= url_e('/admin-dashboard' . $qsSales(['s_status' => $key === 'all' ? '' : $key])) ?>"
-                        aria-current="<?= $isActive ? 'true' : 'false' ?>"
-                        class="filter-pill flex items-center gap-2 rounded-full border <?= $isActive ? 'border-[#00A6A6] bg-[#00A6A6] text-white shadow-[0_0_15px_rgba(0,166,166,0.4)]' : 'border-white/10 bg-white/5 text-gray-300 hover:border-[#00A6A6]/50 hover:text-white' ?> px-4 py-2 text-sm font-semibold transition-all duration-300">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
-                        </svg>
-                        <span><?= $label ?></span>
-                        <span class="rounded-full <?= $isActive ? 'bg-black/25 text-white' : 'bg-black/30 text-gray-400' ?> px-2 py-0.5 text-[10px] font-bold"><?= $count ?></span>
-                    </a>
-                <?php endforeach; ?>
-
-                <span class="ml-3 text-[10px] font-bold uppercase tracking-widest text-gray-500">Type:</span>
-
-                <?php
-                $saleTypeFilters = [
-                    ['all',            'All',      'M4 6h16M4 10h16M4 14h16M4 18h16'],
-                    ['product',        'Products', 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4'],
-                    ['client_payment', 'Client',   'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z'],
-                ];
-                foreach ($saleTypeFilters as [$key, $label, $icon]):
-                    $isActive = ($sFilters['type'] === $key || ($key === 'all' && $sFilters['type'] === 'all'));
-                ?>
-                    <a href="<?= url_e('/admin-dashboard' . $qsSales(['s_type' => $key === 'all' ? '' : $key])) ?>"
-                        aria-current="<?= $isActive ? 'true' : 'false' ?>"
-                        class="filter-pill flex items-center gap-1.5 rounded-full border <?= $isActive ? 'border-[#00A6A6] bg-[#00A6A6] text-white shadow-[0_0_15px_rgba(0,166,166,0.4)]' : 'border-white/10 bg-white/5 text-gray-300 hover:border-[#00A6A6]/50 hover:text-white' ?> px-3 py-1.5 text-xs font-semibold transition-all duration-300">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
-                        </svg>
-                        <span><?= $label ?></span>
-                    </a>
-                <?php endforeach; ?>
+            <!-- Toolbar -->
+            <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:p-5">
+                <div class="relative flex-1">
+                    <svg class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input type="search" name="s_q" value="<?= e($sFilters['search']) ?>" placeholder="Search sales…"
+                        class="h-11 w-full rounded-full border border-white/10 bg-[#0a0a0a] pl-11 pr-4 text-sm text-white placeholder-gray-600 outline-none transition-all focus:border-[#00A6A6] focus:ring-2 focus:ring-[#00A6A6]/20">
+                </div>
+                <a href="<?= url_e('/admin-dashboard/partners/export' . $qsSales()) ?>" download
+                    class="tap-effect inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 text-xs font-bold text-gray-300 transition-all hover:-translate-y-0.5 hover:border-[#00A6A6] hover:text-white">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    CSV
+                </a>
             </div>
 
-            <?= a11y_filter_close() ?>
-        </div>
+            <!-- Primary facet: Status -->
+            <div class="border-t border-white/5 px-4 py-3 sm:px-5">
+                <div class="flex items-center gap-3">
+                    <span class="shrink-0 text-[10px] font-bold uppercase tracking-widest text-gray-500">Status</span>
+                    <div class="flex flex-1 gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
+                        <?php
+                        $saleStatusFilters = [
+                            ['all',      'All',      (int)($saleSum['total']    ?? 0), 'M4 6h16M4 10h16M4 14h16M4 18h16'],
+                            ['pending',  'Pending',  (int)($saleSum['pending']  ?? 0), 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
+                            ['approved', 'Approved', (int)($saleSum['approved'] ?? 0), 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+                            ['rejected', 'Rejected', (int)($saleSum['rejected'] ?? 0), 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'],
+                        ];
+                        foreach ($saleStatusFilters as [$key, $label, $count, $icon]):
+                            $isActive = ($sFilters['status'] === $key || ($key === 'all' && $sFilters['status'] === 'all'));
+                        ?>
+                            <a href="<?= url_e('/admin-dashboard' . $qsSales(['s_status' => $key === 'all' ? '' : $key])) ?>"
+                                aria-current="<?= $isActive ? 'true' : 'false' ?>"
+                                class="filter-pill tap-effect inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all <?= $isActive ? 'border-[#00A6A6] bg-[#00A6A6] text-white shadow-[0_0_12px_rgba(0,166,166,0.35)]' : 'border-white/10 bg-white/5 text-gray-300 hover:border-[#00A6A6]/50 hover:text-white' ?>">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
+                                </svg>
+                                <?= $label ?>
+                                <span class="rounded-full bg-black/25 px-1.5 text-[10px] font-bold <?= $isActive ? 'text-white' : 'text-gray-400' ?>"><?= $count ?></span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
 
-        <!-- Sales table -->
+            <!-- Advanced Filters -->
+            <details class="group border-t border-white/5" <?= $hasSAdvanced ? 'open' : '' ?>>
+                <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02] sm:px-5">
+                    <span class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                        Advanced filters
+                        <?php if ($sAdvancedCount > 0): ?>
+                            <span class="rounded-full bg-[#00A6A6]/15 px-2 py-0.5 text-[10px] font-bold text-[#00A6A6]"><?= $sAdvancedCount ?> active</span>
+                        <?php endif; ?>
+                    </span>
+                    <svg class="adv-chevron h-4 w-4 text-gray-500 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </summary>
+                <div class="space-y-4 border-t border-white/5 bg-[#0a0a0a]/30 px-4 py-4 sm:px-5">
+                    <div>
+                        <div class="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">Type</div>
+                        <div class="flex flex-wrap gap-2">
+                            <?php
+                            $saleTypeFilters = [
+                                ['all',            'All',      'M4 6h16M4 10h16M4 14h16M4 18h16'],
+                                ['product',        'Products', 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4'],
+                                ['client_payment', 'Client',   'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z'],
+                            ];
+                            foreach ($saleTypeFilters as [$key, $label, $icon]):
+                                $isActive = ($sFilters['type'] === $key || ($key === 'all' && $sFilters['type'] === 'all'));
+                            ?>
+                                <a href="<?= url_e('/admin-dashboard' . $qsSales(['s_type' => $key === 'all' ? '' : $key])) ?>"
+                                    class="filter-pill inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all <?= $isActive ? 'border-[#00A6A6] bg-[#00A6A6] text-white' : 'border-white/10 bg-white/5 text-gray-300 hover:border-[#00A6A6]/50 hover:text-white' ?>">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
+                                    </svg>
+                                    <?= $label ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+            </details>
+            <?= a11y_filter_close() ?>
+
+            <!-- Chips -->
+            <?php if (!empty($sActiveChips)): ?>
+                <div class="flex flex-wrap items-center gap-2 border-t border-white/5 px-4 py-3 sm:px-5">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Active</span>
+                    <?php foreach ($sActiveChips as $chip): ?>
+                        <a href="<?= url_e('/admin-dashboard' . $chip['clear']) ?>" class="group inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-gray-300 transition-all hover:border-[#D50000]/40 hover:bg-[#D50000]/10 hover:text-white">
+                            <?= e($chip['label']) ?>
+                            <svg class="h-3 w-3 text-gray-500 group-hover:text-[#D50000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </a>
+                    <?php endforeach; ?>
+                    <a href="<?= url_e('/admin-dashboard?tab=payouts') ?>" class="ml-auto text-[11px] font-bold text-[#00A6A6] hover:text-white">Clear all</a>
+                </div>
+            <?php endif; ?>
+
+            <!-- Count -->
+            <div class="flex items-center justify-between border-t border-white/5 px-4 py-2.5 text-xs text-gray-400 sm:px-5">
+                <span <?= a11y_live_region('polite') ?>><strong class="text-white"><?= count($sales) ?></strong> sale<?= count($sales) !== 1 ? 's' : '' ?> match the active filters</span>
+            </div>
+        </form>
+
+        <!-- Sales Table -->
         <div class="mt-4 overflow-hidden rounded-2xl border border-white/5 bg-[#111] shadow-sm">
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
@@ -496,9 +584,8 @@ $methodSvg = [
     <!-- ============================================================
          PAYOUT REQUESTS SECTION
          ============================================================ -->
-    <section role="region" aria-label="Payout requests">
-
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+    <section role="region" aria-label="Payout requests" class="space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
                 <h2 class="font-heading text-3xl tracking-wide text-white">PAYOUT REQUESTS</h2>
                 <p class="mt-1 text-sm text-gray-400">
@@ -507,59 +594,122 @@ $methodSvg = [
             </div>
         </div>
 
-        <!-- Payout filter bar -->
-        <div class="rounded-2xl border border-white/5 bg-[#111] p-5 shadow-sm space-y-3">
+        <!-- Payouts Filter Bar -->
+        <form method="get" action="<?= url_e('/admin-dashboard') ?>" id="payoutFilterForm" class="overflow-hidden rounded-2xl border border-white/5 bg-[#111] shadow-sm">
+            <input type="hidden" name="tab" value="payouts">
             <?= a11y_filter_open('Filter payout requests by status and method') ?>
 
-            <div class="flex flex-wrap items-center gap-2">
-                <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Status:</span>
-
-                <?php
-                $poStatusFilters = [
-                    ['all',      'All',      (int)($payoutSum['total']    ?? 0), 'M4 6h16M4 10h16M4 14h16M4 18h16'],
-                    ['pending',  'Pending',  (int)($payoutSum['pending']  ?? 0), 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
-                    ['approved', 'Approved', (int)($payoutSum['approved'] ?? 0), 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
-                    ['rejected', 'Rejected', (int)($payoutSum['rejected'] ?? 0), 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'],
-                ];
-                foreach ($poStatusFilters as [$key, $label, $count, $icon]):
-                    $isActive = ($pFilters['status'] === $key || ($key === 'all' && $pFilters['status'] === 'all'));
-                ?>
-                    <a href="<?= url_e('/admin-dashboard' . $qsPayouts(['po_status' => $key === 'all' ? '' : $key])) ?>"
-                        aria-current="<?= $isActive ? 'true' : 'false' ?>"
-                        class="filter-pill flex items-center gap-2 rounded-full border <?= $isActive ? 'border-[#00A6A6] bg-[#00A6A6] text-white shadow-[0_0_15px_rgba(0,166,166,0.4)]' : 'border-white/10 bg-white/5 text-gray-300 hover:border-[#00A6A6]/50 hover:text-white' ?> px-4 py-2 text-sm font-semibold transition-all duration-300">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
-                        </svg>
-                        <span><?= $label ?></span>
-                        <span class="rounded-full <?= $isActive ? 'bg-black/25 text-white' : 'bg-black/30 text-gray-400' ?> px-2 py-0.5 text-[10px] font-bold"><?= $count ?></span>
-                    </a>
-                <?php endforeach; ?>
-
-                <span class="ml-3 text-[10px] font-bold uppercase tracking-widest text-gray-500">Method:</span>
-
-                <?php
-                $poMethodFilters = [
-                    ['all',           'All',  'M4 6h16M4 10h16M4 14h16M4 18h16'],
-                    ['gcash',         'GCash', 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z'],
-                    ['bank_transfer', 'Bank',  'M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z'],
-                    ['cash',          'Cash',  'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z'],
-                ];
-                foreach ($poMethodFilters as [$key, $label, $icon]):
-                    $isActive = ($pFilters['method'] === $key || ($key === 'all' && $pFilters['method'] === 'all'));
-                ?>
-                    <a href="<?= url_e('/admin-dashboard' . $qsPayouts(['po_method' => $key === 'all' ? '' : $key])) ?>"
-                        aria-current="<?= $isActive ? 'true' : 'false' ?>"
-                        class="filter-pill flex items-center gap-1.5 rounded-full border <?= $isActive ? 'border-[#00A6A6] bg-[#00A6A6] text-white shadow-[0_0_15px_rgba(0,166,166,0.4)]' : 'border-white/10 bg-white/5 text-gray-300 hover:border-[#00A6A6]/50 hover:text-white' ?> px-3 py-1.5 text-xs font-semibold transition-all duration-300">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
-                        </svg>
-                        <span><?= $label ?></span>
-                    </a>
-                <?php endforeach; ?>
+            <!-- Toolbar -->
+            <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:p-5">
+                <div class="relative flex-1">
+                    <svg class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input type="search" name="po_q" value="<?= e($pFilters['search']) ?>" placeholder="Search payouts…"
+                        class="h-11 w-full rounded-full border border-white/10 bg-[#0a0a0a] pl-11 pr-4 text-sm text-white placeholder-gray-600 outline-none transition-all focus:border-[#00A6A6] focus:ring-2 focus:ring-[#00A6A6]/20">
+                </div>
+                <a href="<?= url_e('/admin-dashboard/payouts/export' . $qsPayouts()) ?>" download
+                    class="tap-effect inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 text-xs font-bold text-gray-300 transition-all hover:-translate-y-0.5 hover:border-[#00A6A6] hover:text-white">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    CSV
+                </a>
             </div>
 
+            <!-- Primary facet: Status -->
+            <div class="border-t border-white/5 px-4 py-3 sm:px-5">
+                <div class="flex items-center gap-3">
+                    <span class="shrink-0 text-[10px] font-bold uppercase tracking-widest text-gray-500">Status</span>
+                    <div class="flex flex-1 gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
+                        <?php
+                        $poStatusFilters = [
+                            ['all',      'All',      (int)($payoutSum['total']    ?? 0), 'M4 6h16M4 10h16M4 14h16M4 18h16'],
+                            ['pending',  'Pending',  (int)($payoutSum['pending']  ?? 0), 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
+                            ['approved', 'Approved', (int)($payoutSum['approved'] ?? 0), 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+                            ['rejected', 'Rejected', (int)($payoutSum['rejected'] ?? 0), 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'],
+                        ];
+                        foreach ($poStatusFilters as [$key, $label, $count, $icon]):
+                            $isActive = ($pFilters['status'] === $key || ($key === 'all' && $pFilters['status'] === 'all'));
+                        ?>
+                            <a href="<?= url_e('/admin-dashboard' . $qsPayouts(['po_status' => $key === 'all' ? '' : $key])) ?>"
+                                class="filter-pill tap-effect inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all <?= $isActive ? 'border-[#00A6A6] bg-[#00A6A6] text-white shadow-[0_0_12px_rgba(0,166,166,0.35)]' : 'border-white/10 bg-white/5 text-gray-300 hover:border-[#00A6A6]/50 hover:text-white' ?>">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
+                                </svg>
+                                <?= $label ?>
+                                <span class="rounded-full bg-black/25 px-1.5 text-[10px] font-bold <?= $isActive ? 'text-white' : 'text-gray-400' ?>"><?= $count ?></span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Filters -->
+            <details class="group border-t border-white/5" <?= $hasPAdvanced ? 'open' : '' ?>>
+                <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02] sm:px-5">
+                    <span class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                        Advanced filters
+                        <?php if ($pAdvancedCount > 0): ?>
+                            <span class="rounded-full bg-[#00A6A6]/15 px-2 py-0.5 text-[10px] font-bold text-[#00A6A6]"><?= $pAdvancedCount ?> active</span>
+                        <?php endif; ?>
+                    </span>
+                    <svg class="adv-chevron h-4 w-4 text-gray-500 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </summary>
+                <div class="space-y-4 border-t border-white/5 bg-[#0a0a0a]/30 px-4 py-4 sm:px-5">
+                    <div>
+                        <div class="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">Method</div>
+                        <div class="flex flex-wrap gap-2">
+                            <?php
+                            $poMethodFilters = [
+                                ['all',           'All',  'M4 6h16M4 10h16M4 14h16M4 18h16'],
+                                ['gcash',         'GCash', 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z'],
+                                ['bank_transfer', 'Bank',  'M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z'],
+                                ['cash',          'Cash',  'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z'],
+                            ];
+                            foreach ($poMethodFilters as [$key, $label, $icon]):
+                                $isActive = ($pFilters['method'] === $key || ($key === 'all' && $pFilters['method'] === 'all'));
+                            ?>
+                                <a href="<?= url_e('/admin-dashboard' . $qsPayouts(['po_method' => $key === 'all' ? '' : $key])) ?>"
+                                    class="filter-pill inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all <?= $isActive ? 'border-[#00A6A6] bg-[#00A6A6] text-white' : 'border-white/10 bg-white/5 text-gray-300 hover:border-[#00A6A6]/50 hover:text-white' ?>">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
+                                    </svg>
+                                    <?= $label ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+            </details>
             <?= a11y_filter_close() ?>
-        </div>
+
+            <!-- Chips -->
+            <?php if (!empty($pActiveChips)): ?>
+                <div class="flex flex-wrap items-center gap-2 border-t border-white/5 px-4 py-3 sm:px-5">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Active</span>
+                    <?php foreach ($pActiveChips as $chip): ?>
+                        <a href="<?= url_e('/admin-dashboard' . $chip['clear']) ?>" class="group inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-gray-300 transition-all hover:border-[#D50000]/40 hover:bg-[#D50000]/10 hover:text-white">
+                            <?= e($chip['label']) ?>
+                            <svg class="h-3 w-3 text-gray-500 group-hover:text-[#D50000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </a>
+                    <?php endforeach; ?>
+                    <a href="<?= url_e('/admin-dashboard?tab=payouts') ?>" class="ml-auto text-[11px] font-bold text-[#00A6A6] hover:text-white">Clear all</a>
+                </div>
+            <?php endif; ?>
+
+            <!-- Count -->
+            <div class="flex items-center justify-between border-t border-white/5 px-4 py-2.5 text-xs text-gray-400 sm:px-5">
+                <span <?= a11y_live_region('polite') ?>><strong class="text-white"><?= count($payouts) ?></strong> payout<?= count($payouts) !== 1 ? 's' : '' ?> match the active filters</span>
+            </div>
+        </form>
 
         <!-- Bulk bar -->
         <div id="bulkBar"
@@ -587,7 +737,7 @@ $methodSvg = [
             </div>
         </div>
 
-        <!-- Payout table -->
+        <!-- Payout Table -->
         <div class="mt-4 overflow-hidden rounded-2xl border border-white/5 bg-[#111] shadow-sm">
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
@@ -755,8 +905,8 @@ $methodSvg = [
          BATCH HISTORY
          ============================================================ -->
     <?php if (!empty($batches)): ?>
-        <section role="region" aria-label="Payout batch history">
-            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <section role="region" aria-label="Payout batch history" class="space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h2 class="font-heading text-3xl tracking-wide text-white">PAYOUT BATCHES</h2>
                     <p class="mt-1 text-sm text-gray-400">Grouped payout processing for reconciliation.</p>
@@ -1282,6 +1432,22 @@ $methodSvg = [
             opacity: 1;
             transform: translateY(0);
         }
+    }
+
+    /* Details marker hiding + chevron rotation */
+    #salesFilterForm summary::-webkit-details-marker,
+    #payoutFilterForm summary::-webkit-details-marker {
+        display: none;
+    }
+
+    #salesFilterForm summary,
+    #payoutFilterForm summary {
+        list-style: none;
+    }
+
+    #salesFilterForm details[open] .adv-chevron,
+    #payoutFilterForm details[open] .adv-chevron {
+        transform: rotate(180deg);
     }
 
     @media (prefers-reduced-motion: reduce) {

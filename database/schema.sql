@@ -144,7 +144,7 @@ CREATE TABLE `partner_profiles` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
--- 5. partners  (legacy)
+-- 5. partners (legacy)
 -- ============================================================================
 CREATE TABLE `partners` (
   `id` char(36) NOT NULL DEFAULT UUID(),
@@ -182,7 +182,7 @@ CREATE TABLE `b2b_clients` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
--- 7. programs
+-- 7. programs (🚀 FIXED: Default icon is now empty string, no emojis)
 -- ============================================================================
 CREATE TABLE `programs` (
   `id` char(36) NOT NULL DEFAULT UUID(),
@@ -193,7 +193,7 @@ CREATE TABLE `programs` (
   `description` text DEFAULT NULL,
   `active` tinyint(1) NOT NULL DEFAULT 1,
 
-  `icon` varchar(20) NOT NULL DEFAULT '🏋️',
+  `icon` varchar(20) NOT NULL DEFAULT '',
   `features` json DEFAULT NULL,
   `operational_cost` decimal(10,2) NOT NULL DEFAULT 0.00,
   `portal_visible` tinyint(1) NOT NULL DEFAULT 1,
@@ -207,7 +207,7 @@ CREATE TABLE `programs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
--- 8. enrollments (🔐 FIXED: Added 'b2b' to tier enum)
+-- 8. enrollments
 -- ============================================================================
 CREATE TABLE `enrollments` (
   `id` char(36) NOT NULL DEFAULT UUID(),
@@ -370,7 +370,7 @@ CREATE TABLE `audit_logs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
--- 15. notifications
+-- 15. notifications (🚀 FIXED: Supports read_at)
 -- ============================================================================
 CREATE TABLE `notifications` (
   `id` char(36) NOT NULL DEFAULT UUID(),
@@ -511,7 +511,7 @@ VALUES
  '2026-09-17 17:34:25','2026-09-17 17:34:25');
 
 -- ---------------------------------------------------------------------------
--- programs (🔐 FIXED: Proper UTF-8 Emojis)
+-- programs
 -- ---------------------------------------------------------------------------
 INSERT INTO `programs`
   (`id`,`name`,`tier`,`price`,`duration_days`,`description`,`active`,
@@ -521,21 +521,21 @@ INSERT INTO `programs`
 VALUES
 ('94afe956-b263-11f1-a728-40c2bab22b88','Digital Access','digital',500.00,30,
  'Digital workout system, QR time in/out, attendance calendar, AI workout recommender.',1,
- '📱',
+ '',
  JSON_ARRAY('Digital workout system','QR time in/out','Attendance calendar','AI workout recommender'),
  0.00,1,0,3,1,
  '2026-09-17 14:46:59','2026-09-17 14:46:59'),
 
 ('94affcef-b263-11f1-a728-40c2bab22b88','Standard Membership','standard',1000.00,30,
  'Full gym access, QR check-in, attendance tracking, group class booking.',1,
- '⚡',
+ '',
  JSON_ARRAY('Full gym access','QR check-in','Attendance tracking','Group class booking','GCash payments'),
  0.00,1,0,3,2,
  '2026-09-17 14:46:59','2026-09-17 14:46:59'),
 
 ('94afff8c-b263-11f1-a728-40c2bab22b88','Premium All-Inclusive','premium',2000.00,30,
  'Everything in Standard + personal coaching + nutrition + 24/7 AI coach.',1,
- '👑',
+ '',
  JSON_ARRAY('Everything in Standard','Personal coaching','Nutrition guidance','Priority class booking','AI coach 24/7'),
  0.00,1,0,3,3,
  '2026-09-17 14:46:59','2026-09-17 14:46:59');
@@ -675,7 +675,9 @@ ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uniq_users_email` (`email`),
   ADD KEY `idx_users_role` (`role`),
-  ADD KEY `idx_users_created` (`created_date`);
+  ADD KEY `idx_users_created` (`created_date`),
+  ADD KEY `idx_users_verified` (`email_verified`),
+  ADD KEY `idx_users_last_login` (`last_login_at`);
 
 -- ---- sessions ----
 ALTER TABLE `sessions`

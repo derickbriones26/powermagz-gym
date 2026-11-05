@@ -73,19 +73,47 @@ class Program extends Model
      ============================================================= */
 
     /**
-     * Every program plus:
-     *   active_enrollments, pending_enrollments, expired_enrollments,
-     *   cancelled_enrollments, total_enrollments, revenue
+     * Every program plus per-program enrollment/revenue stats.
      *
-     * Backs:
-     *   - Active enrollments per tier
-     *   - Revenue contribution per program card
-     *   - Cancellation / expiration trends
-     *   - Most / least popular callout
+     * Backwards-compatible: called with no args by popularity(),
+     * statsSummary(), and the member Programs tab, it still returns
+     * the full list. Pass a filter array to scope the result set
+     * (used by the admin Programs tab).
+     *
+     * @param array{
+     *   status?: string,   // 'all'|'active'|'inactive'
+     *   tier?:   string,   // 'all'|'digital'|'standard'|'premium'|'b2b'
+     *   search?: string,
+     * } $filters
      */
-    public static function allWithStats(): array
+    public static function allWithStats(array $filters = []): array
     {
-        $pdo = Database::pdo();
+        $pdo    = Database::pdo();
+        $where  = [];
+        $params = [];
+
+        /* ---- Status ---- */
+        $status = $filters['status'] ?? 'all';
+        if ($status === 'active') {
+            $where[] = 'p.`active` = 1';
+        } elseif ($status === 'inactive') {
+            $where[] = 'p.`active` = 0';
+        }
+
+        /* ---- Tier ---- */
+        $tier = $filters['tier'] ?? 'all';
+        if (in_array($tier, ['digital', 'standard', 'premium', 'b2b'], true)) {
+            $where[]  = 'p.`tier` = ?';
+            $params[] = $tier;
+        }
+
+        /* ---- Search (name only) ---- */
+        $search = trim((string)($filters['search'] ?? ''));
+        if ($search !== '') {
+            $q = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $search) . '%';
+            $where[]  = 'p.`name` LIKE ?';
+            $params[] = $q;
+        }
 
         $sql = "
             SELECT
@@ -114,10 +142,22 @@ class Program extends Model
                 WHERE `status` = 'paid'
                 GROUP BY `tier`
             ) pay ON pay.`tier` = p.`tier`
-            ORDER BY p.`sort_order` ASC, p.`tier` ASC
         ";
 
-        return $pdo->query($sql)->fetchAll();
+        if ($where) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+
+        $sql .= ' ORDER BY p.`sort_order` ASC, p.`tier` ASC';
+
+        try {
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll();
+        } catch (\Throwable $e) {
+            error_log('[Program::allWithStats] ' . $e->getMessage());
+            return [];
+        }
     }
 
     /**
@@ -261,15 +301,18 @@ class Program extends Model
 
     /**
      * Default icon fallback per tier when a program has none set.
+     *
+     * 🚀 2026 UI: Returns empty string intentionally so the view layer
+     * always falls back to the modern Heroicon SVG defined in
+     * $tierMeta (see programs_tab.php and member/programs.php).
+     * 
+     * Kept as a method so existing call sites in AdminController
+     * (saveProgram, duplicateProgram) continue to work without
+     * spamming the DB with deprecated emoji strings.
      */
     public static function tierFallbackIcon(string $tier): string
     {
-        return [
-            'digital'  => '📱',
-            'standard' => '⚡',
-            'premium'  => '👑',
-            'b2b'      => '🤝',
-        ][$tier] ?? '🏋️';
+        return '';
     }
 
     /**

@@ -184,94 +184,117 @@ $statusCfg = [
     </div>
 
     <!-- ============================================================
-         FILTER BAR
+         FILTER BAR (REDESIGNED)
          ============================================================ -->
-    <form method="get" action="<?= url_e('/admin-dashboard') ?>" id="enrollFilterForm"
-        class="rounded-2xl border border-white/5 bg-[#111] p-5 shadow-sm space-y-4">
-
+    <div class="rounded-2xl border border-white/5 bg-[#111] shadow-sm overflow-hidden" id="enrollFilterForm">
         <input type="hidden" name="tab" value="enrollments">
 
         <?= a11y_filter_open('Filter enrollments by status and tier') ?>
 
-        <!-- Status pills -->
-        <div class="flex flex-wrap items-center gap-2">
-            <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Status:</span>
+        <!-- Toolbar: search + export -->
+        <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:p-5">
+            <div class="relative flex-1">
+                <svg class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input id="enrollSearch" type="search" placeholder="Search member…"
+                    aria-label="Search enrollments by member name"
+                    class="h-11 w-full rounded-full border border-white/10 bg-[#0a0a0a] pl-11 pr-4 text-sm text-white placeholder-gray-600 outline-none transition-all focus:border-[#00A6A6] focus:ring-2 focus:ring-[#00A6A6]/20">
+            </div>
 
-            <?php
-            $statusFilters = [
-                ['all',       'All',       (int)$summary['total'],     'M4 6h16M4 10h16M4 14h16M4 18h16'],
-                ['active',    'Active',    (int)$summary['active'],    'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
-                ['pending',   'Pending',   (int)$summary['pending'],   'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
-                ['paused',    'Paused',    (int)$summary['paused'],    'M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z'],
-                ['expired',   'Expired',   (int)$summary['expired'],   'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'],
-                ['cancelled', 'Cancelled', (int)$summary['cancelled'], 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636'],
-            ];
-            foreach ($statusFilters as [$key, $label, $count, $icon]):
-            ?>
-                <button type="button"
-                    data-status-filter="<?= $key ?>"
-                    onclick="setStatusFilter('<?= $key ?>')"
-                    aria-pressed="<?= $key === 'all' ? 'true' : 'false' ?>"
-                    class="status-filter filter-pill flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-gray-300 transition-all duration-300 hover:border-[#00A6A6]/50 hover:text-white
-                        <?= $key === 'all' ? 'active' : '' ?>">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
-                    </svg>
-                    <span><?= $label ?></span>
-                    <span class="rounded-full bg-black/30 px-2 py-0.5 text-[10px] font-bold text-gray-400"><?= $count ?></span>
-                </button>
-            <?php endforeach; ?>
+            <a href="<?= url_e('/admin-dashboard/enrollments/export') ?>" download
+                class="tap-effect inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 text-xs font-bold text-gray-300 transition-all hover:-translate-y-0.5 hover:border-[#00A6A6] hover:text-white">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Export CSV
+            </a>
         </div>
 
-        <!-- Tier pills + search -->
-        <div class="flex flex-wrap items-center gap-2 pt-3 border-t border-white/5">
-            <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Tier:</span>
-
-            <?php
-            $tierFilters = [
-                ['all',      'All',      'M4 6h16M4 10h16M4 14h16M4 18h16'],
-                ['digital',  'Digital',  'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z'],
-                ['standard', 'Standard', 'M13 10V3L4 14h7v7l9-11h-7z'],
-                ['premium',  'Premium',  'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z'],
-            ];
-            foreach ($tierFilters as [$key, $label, $icon]):
-            ?>
-                <button type="button"
-                    data-tier-filter="<?= $key ?>"
-                    onclick="setTierFilter('<?= $key ?>')"
-                    aria-pressed="<?= $key === 'all' ? 'true' : 'false' ?>"
-                    class="tier-filter filter-pill flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-gray-300 transition-all duration-300 hover:border-[#00A6A6]/50 hover:text-white
-                        <?= $key === 'all' ? 'active' : '' ?>">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
-                    </svg>
-                    <span><?= $label ?></span>
-                </button>
-            <?php endforeach; ?>
-
-            <div class="ml-auto flex flex-wrap items-center gap-2">
-                <div class="relative w-full sm:w-64">
-                    <svg class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input id="enrollSearch" type="search" placeholder="Search member…"
-                        aria-label="Search enrollments by member name"
-                        class="h-11 w-full rounded-full border border-white/10 bg-[#0a0a0a] pl-11 pr-4 text-sm text-white placeholder-gray-600 outline-none transition-all focus:border-[#00A6A6] focus:ring-2 focus:ring-[#00A6A6]/20">
+        <!-- Primary facet: Status (always visible) -->
+        <div class="border-t border-white/5 px-4 py-3 sm:px-5">
+            <div class="flex items-center gap-3">
+                <span class="shrink-0 text-[10px] font-bold uppercase tracking-widest text-gray-500">Status</span>
+                <div class="flex flex-1 gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
+                    <?php
+                    $statusFilters = [
+                        ['all',       'All',       (int)$summary['total'],     'M4 6h16M4 10h16M4 14h16M4 18h16'],
+                        ['active',    'Active',    (int)$summary['active'],    'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+                        ['pending',   'Pending',   (int)$summary['pending'],   'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
+                        ['paused',    'Paused',    (int)$summary['paused'],    'M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z'],
+                        ['expired',   'Expired',   (int)$summary['expired'],   'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'],
+                        ['cancelled', 'Cancelled', (int)$summary['cancelled'], 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636'],
+                    ];
+                    foreach ($statusFilters as [$key, $label, $count, $icon]):
+                    ?>
+                        <button type="button"
+                            data-status-filter="<?= $key ?>"
+                            onclick="setStatusFilter('<?= $key ?>')"
+                            aria-pressed="<?= $key === 'all' ? 'true' : 'false' ?>"
+                            class="status-filter tap-effect inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-gray-300 transition-all hover:border-[#00A6A6]/50 hover:text-white <?= $key === 'all' ? 'active' : '' ?>">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
+                            </svg>
+                            <span><?= $label ?></span>
+                            <span class="rounded-full bg-black/30 px-1.5 text-[10px] font-bold text-gray-400"><?= $count ?></span>
+                        </button>
+                    <?php endforeach; ?>
                 </div>
-
-                <a href="<?= url_e('/admin-dashboard/enrollments/export') ?>"
-                    class="tap-effect inline-flex h-11 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 text-xs font-bold text-gray-300 transition-all hover:-translate-y-0.5 hover:border-[#00A6A6] hover:text-white"
-                    download>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Export CSV
-                </a>
             </div>
         </div>
 
+        <!-- Advanced filters (collapsible) -->
+        <details class="group border-t border-white/5" id="advEnrollFilters">
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02] sm:px-5">
+                <span class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    Advanced filters
+                    <span id="advTierBadge" class="hidden rounded-full bg-[#00A6A6]/15 px-2 py-0.5 text-[10px] font-bold text-[#00A6A6]">0 active</span>
+                </span>
+                <svg class="adv-chevron h-4 w-4 text-gray-500 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </summary>
+
+            <div class="space-y-4 border-t border-white/5 bg-[#0a0a0a]/30 px-4 py-4 sm:px-5">
+                <div>
+                    <div class="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">Tier</div>
+                    <div class="flex flex-wrap gap-2">
+                        <?php
+                        $tierFilters = [
+                            ['all',      'All',      'M4 6h16M4 10h16M4 14h16M4 18h16'],
+                            ['digital',  'Digital',  'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z'],
+                            ['standard', 'Standard', 'M13 10V3L4 14h7v7l9-11h-7z'],
+                            ['premium',  'Premium',  'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z'],
+                        ];
+                        foreach ($tierFilters as [$key, $label, $icon]):
+                        ?>
+                            <button type="button"
+                                data-tier-filter="<?= $key ?>"
+                                onclick="setTierFilter('<?= $key ?>')"
+                                aria-pressed="<?= $key === 'all' ? 'true' : 'false' ?>"
+                                class="tier-filter tap-effect inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-gray-300 transition-all hover:border-[#00A6A6]/50 hover:text-white <?= $key === 'all' ? 'active' : '' ?>">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
+                                </svg>
+                                <span><?= $label ?></span>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </details>
         <?= a11y_filter_close() ?>
-    </form>
+
+        <!-- Live result count -->
+        <div class="flex items-center justify-between border-t border-white/5 px-4 py-2.5 text-xs text-gray-400 sm:px-5">
+            <span <?= a11y_live_region('polite') ?>>
+                <strong class="text-white" id="filterVisibleCount"><?= count($enrollments) ?></strong> enrollment(s) match the active filters
+            </span>
+        </div>
+    </div>
 
     <!-- ============================================================
          BULK ACTIONS BAR
@@ -973,6 +996,19 @@ $statusCfg = [
         background-color: rgba(255, 255, 255, 0.2) !important;
     }
 
+    /* Details marker hiding + chevron rotation */
+    #advEnrollFilters summary::-webkit-details-marker {
+        display: none;
+    }
+
+    #advEnrollFilters summary {
+        list-style: none;
+    }
+
+    #advEnrollFilters[open] .adv-chevron {
+        transform: rotate(180deg);
+    }
+
     @media (prefers-reduced-motion: reduce) {
 
         .enroll-row,
@@ -1152,9 +1188,29 @@ $statusCfg = [
                 }
             });
 
+            // Update empty state
             const noResults = document.getElementById('noEnrollResults');
             if (noResults) {
                 noResults.classList.toggle('hidden', visible > 0 || rows.length === 0);
+            }
+
+            // Update live count
+            const countEl = document.getElementById('filterVisibleCount');
+            if (countEl) countEl.textContent = visible;
+
+            // Update advanced (tier) badge + auto-open details
+            let advCount = 0;
+            if (currentTier !== 'all') advCount++;
+
+            const badge = document.getElementById('advTierBadge');
+            if (badge) {
+                badge.textContent = advCount + ' active';
+                badge.classList.toggle('hidden', advCount === 0);
+            }
+
+            const details = document.getElementById('advEnrollFilters');
+            if (details && advCount > 0) {
+                details.setAttribute('open', 'open');
             }
         }
 

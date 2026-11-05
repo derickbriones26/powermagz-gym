@@ -17,12 +17,12 @@ require_once BASE_PATH . '/src/Views/admin/partials/_form_helpers.php';
 $users       = $data['users']          ?? [];
 $roleCounts  = $data['userRoleCounts'] ?? ['all' => 0, 'user' => 0, 'partner' => 0, 'admin' => 0, 'staff' => 0];
 $filters     = $data['memberFilters']  ?? [
-    'role' => 'all',
-    'status' => 'all',
-    'tier' => 'all',
+    'role'        => 'all',
+    'status'      => 'all',
+    'tier'        => 'all',
     'joined_from' => '',
-    'joined_to' => '',
-    'search' => '',
+    'joined_to'   => '',
+    'search'      => '',
 ];
 
 /* Tier meta */
@@ -66,6 +66,66 @@ $qs = function (array $overrides = []) use ($filters): string {
     $merged = array_filter($merged, fn($v) => $v !== '' && $v !== 'all');
     return $merged ? '?' . http_build_query($merged) : '?tab=members';
 };
+
+/* ---- Filter option sets ---- */
+$roleFilters = [
+    ['all',     'All',      (int)$roleCounts['all'],     'M4 6h16M4 10h16M4 14h16M4 18h16'],
+    ['user',    'Members',  (int)$roleCounts['user'],    'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'],
+    ['partner', 'Partners', (int)$roleCounts['partner'], 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z'],
+    ['staff',   'Staff',    (int)$roleCounts['staff'],   'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'],
+    ['admin',   'Admins',   (int)$roleCounts['admin'],   'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'],
+];
+
+$tierFilters = [
+    ['all',      'All',      'M4 6h16M4 10h16M4 14h16M4 18h16'],
+    ['digital',  'Digital',  'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z'],
+    ['standard', 'Standard', 'M13 10V3L4 14h7v7l9-11h-7z'],
+    ['premium',  'Premium',  'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z'],
+];
+
+$statusFilters = [
+    ['all',       'All',       'M4 6h16M4 10h16M4 14h16M4 18h16'],
+    ['active',    'Active',    'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+    ['pending',   'Pending',   'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
+    ['paused',    'Paused',    'M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z'],
+    ['expired',   'Expired',   'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'],
+    ['cancelled', 'Cancelled', 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636'],
+];
+
+/* ---- Advanced-filter state + removable chips ---- */
+$roleChipLabels = ['user' => 'Members', 'partner' => 'Partners', 'staff' => 'Staff', 'admin' => 'Admins'];
+$advancedCount  = 0;
+$activeChips    = [];
+
+if ($filters['role'] !== 'all') {
+    $advancedCount++;
+    $activeChips[] = [
+        'label' => 'Role: ' . ($roleChipLabels[$filters['role']] ?? ucfirst($filters['role'])),
+        'clear' => $qs(['role' => '']),
+    ];
+}
+if ($filters['tier'] !== 'all') {
+    $advancedCount++;
+    $activeChips[] = [
+        'label' => 'Tier: ' . ucfirst($filters['tier']),
+        'clear' => $qs(['tier' => '']),
+    ];
+}
+if ($filters['joined_from'] !== '' || $filters['joined_to'] !== '') {
+    $advancedCount++;
+    $activeChips[] = [
+        'label' => 'Joined: ' . ($filters['joined_from'] ?: '…') . ' → ' . ($filters['joined_to'] ?: '…'),
+        'clear' => $qs(['joined_from' => '', 'joined_to' => '']),
+    ];
+}
+if ($filters['search'] !== '') {
+    $activeChips[] = [
+        'label' => 'Search: "' . $filters['search'] . '"',
+        'clear' => $qs(['q' => '']),
+    ];
+}
+
+$hasAdvanced = $advancedCount > 0;
 ?>
 
 <div class="space-y-8 animate-[fade-in_0.4s_ease-out]">
@@ -84,7 +144,7 @@ $qs = function (array $overrides = []) use ($filters): string {
                 MEMBERS
             </h1>
             <p class="mt-2 max-w-xl text-sm text-gray-400 sm:text-base">
-                Every account on the platform — filter by role, tier, enrollment status, or join date.
+                Every account on the platform filter by role, tier, enrollment status, or join date.
             </p>
         </div>
     </div>
@@ -168,156 +228,198 @@ $qs = function (array $overrides = []) use ($filters): string {
     </div>
 
     <!-- ============================================================
-         FILTER BAR
+         FILTER BAR (REDESIGNED)
          ============================================================ -->
     <form method="get" action="<?= url_e('/admin-dashboard') ?>" id="memberFilterForm"
-        class="rounded-2xl border border-white/5 bg-[#111] p-5 shadow-sm space-y-4">
+        class="overflow-hidden rounded-2xl border border-white/5 bg-[#111] shadow-sm">
 
         <input type="hidden" name="tab" value="members">
 
         <?= a11y_filter_open('Filter members by role, tier, enrollment status, and join date') ?>
 
-        <!-- Role pills -->
-        <div class="flex flex-wrap items-center gap-2">
-            <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500 w-full sm:w-auto">Role:</span>
+        <!-- Toolbar: search + export -->
+        <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:p-5">
+            <div class="relative flex-1">
+                <svg class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input type="search" name="q" value="<?= e($filters['search']) ?>"
+                    placeholder="Search by name or email…"
+                    class="h-11 w-full rounded-full border border-white/10 bg-[#0a0a0a] pl-11 pr-4 text-sm text-white placeholder-gray-600 outline-none transition-all focus:border-[#00A6A6] focus:ring-2 focus:ring-[#00A6A6]/20">
+            </div>
 
-            <?php
-            $roleFilters = [
-                ['all',     'All',      (int)$roleCounts['all'],     'M4 6h16M4 10h16M4 14h16M4 18h16'],
-                ['user',    'Members',  (int)$roleCounts['user'],    'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'],
-                ['partner', 'Partners', (int)$roleCounts['partner'], 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z'],
-                ['staff',   'Staff',    (int)$roleCounts['staff'],   'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'],
-                ['admin',   'Admins',   (int)$roleCounts['admin'],   'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'],
-            ];
-            foreach ($roleFilters as [$key, $label, $count, $icon]):
-                $isActive = ($filters['role'] === $key || ($key === 'all' && $filters['role'] === 'all'));
-            ?>
-                <a href="<?= url_e('/admin-dashboard' . $qs(['role' => $key === 'all' ? '' : $key])) ?>"
-                    aria-current="<?= $isActive ? 'true' : 'false' ?>"
-                    class="role-filter filter-pill flex items-center gap-2 rounded-full border <?= $isActive ? 'border-[#00A6A6] bg-[#00A6A6] text-white shadow-[0_0_15px_rgba(0,166,166,0.4)]' : 'border-white/10 bg-white/5 text-gray-300 hover:border-[#00A6A6]/50 hover:text-white' ?> px-4 py-2 text-sm font-semibold transition-all duration-300">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
-                    </svg>
-                    <span><?= $label ?></span>
-                    <span class="rounded-full <?= $isActive ? 'bg-black/25 text-white' : 'bg-black/30 text-gray-400' ?> px-2 py-0.5 text-[10px] font-bold"><?= $count ?></span>
-                </a>
-            <?php endforeach; ?>
+            <a href="<?= url_e('/admin-dashboard/members/export' . $qs()) ?>"
+                class="tap-effect inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 text-xs font-bold text-gray-300 transition-all hover:-translate-y-0.5 hover:border-[#00A6A6] hover:text-white"
+                download>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Export CSV
+            </a>
         </div>
 
-        <!-- Tier + Status pills -->
-        <div class="flex flex-wrap items-center gap-2 pt-3 border-t border-white/5">
-            <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Tier:</span>
-
-            <?php
-            $tierFilters = [
-                ['all',      'All',      'M4 6h16M4 10h16M4 14h16M4 18h16'],
-                ['digital',  'Digital',  'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z'],
-                ['standard', 'Standard', 'M13 10V3L4 14h7v7l9-11h-7z'],
-                ['premium',  'Premium',  'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z'],
-            ];
-            foreach ($tierFilters as [$key, $label, $icon]):
-                $isActive = ($filters['tier'] === $key || ($key === 'all' && $filters['tier'] === 'all'));
-            ?>
-                <a href="<?= url_e('/admin-dashboard' . $qs(['tier' => $key === 'all' ? '' : $key])) ?>"
-                    aria-current="<?= $isActive ? 'true' : 'false' ?>"
-                    class="tier-filter filter-pill flex items-center gap-1.5 rounded-full border <?= $isActive ? 'border-[#00A6A6] bg-[#00A6A6] text-white shadow-[0_0_15px_rgba(0,166,166,0.4)]' : 'border-white/10 bg-white/5 text-gray-300 hover:border-[#00A6A6]/50 hover:text-white' ?> px-3 py-1.5 text-xs font-semibold transition-all duration-300">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
-                    </svg>
-                    <span><?= $label ?></span>
-                </a>
-            <?php endforeach; ?>
-
-            <span class="ml-3 text-[10px] font-bold uppercase tracking-widest text-gray-500">Status:</span>
-
-            <?php
-            $statusFilters = [
-                ['all',       'All',       'M4 6h16M4 10h16M4 14h16M4 18h16'],
-                ['active',    'Active',    'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
-                ['pending',   'Pending',   'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
-                ['paused',    'Paused',    'M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z'],
-                ['expired',   'Expired',   'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'],
-                ['cancelled', 'Cancelled', 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636'],
-            ];
-            foreach ($statusFilters as [$key, $label, $icon]):
-                $isActive = ($filters['status'] === $key || ($key === 'all' && $filters['status'] === 'all'));
-            ?>
-                <a href="<?= url_e('/admin-dashboard' . $qs(['status' => $key === 'all' ? '' : $key])) ?>"
-                    aria-current="<?= $isActive ? 'true' : 'false' ?>"
-                    class="status-filter filter-pill flex items-center gap-1.5 rounded-full border <?= $isActive ? 'border-[#00A6A6] bg-[#00A6A6] text-white shadow-[0_0_15px_rgba(0,166,166,0.4)]' : 'border-white/10 bg-white/5 text-gray-300 hover:border-[#00A6A6]/50 hover:text-white' ?> px-3 py-1.5 text-xs font-semibold transition-all duration-300">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
-                    </svg>
-                    <span><?= $label ?></span>
-                </a>
-            <?php endforeach; ?>
-        </div>
-
-        <!-- Date + search + export -->
-        <div class="grid gap-3 pt-3 border-t border-white/5 lg:grid-cols-[1fr_1fr_2fr_auto_auto]">
-
-            <label class="block">
-                <span class="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-500">Joined from</span>
-                <input type="date" name="joined_from" value="<?= e($filters['joined_from']) ?>"
-                    class="h-11 w-full rounded-xl border border-white/10 bg-[#0a0a0a] px-4 text-sm text-white outline-none transition-all focus:border-[#00A6A6] focus:ring-2 focus:ring-[#00A6A6]/20">
-            </label>
-
-            <label class="block">
-                <span class="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-500">Joined to</span>
-                <input type="date" name="joined_to" value="<?= e($filters['joined_to']) ?>"
-                    class="h-11 w-full rounded-xl border border-white/10 bg-[#0a0a0a] px-4 text-sm text-white outline-none transition-all focus:border-[#00A6A6] focus:ring-2 focus:ring-[#00A6A6]/20">
-            </label>
-
-            <label class="block">
-                <span class="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-500">Search</span>
-                <div class="relative">
-                    <svg class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input type="search" name="q" value="<?= e($filters['search']) ?>"
-                        placeholder="Name or email…"
-                        class="h-11 w-full rounded-xl border border-white/10 bg-[#0a0a0a] pl-11 pr-4 text-sm text-white placeholder-gray-600 outline-none transition-all focus:border-[#00A6A6] focus:ring-2 focus:ring-[#00A6A6]/20">
+        <!-- Primary facet: Status (always visible) -->
+        <div class="border-t border-white/5 px-4 py-3 sm:px-5">
+            <div class="flex items-center gap-3">
+                <span class="shrink-0 text-[10px] font-bold uppercase tracking-widest text-gray-500">Status</span>
+                <div class="flex flex-1 gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
+                    <?php foreach ($statusFilters as [$key, $label, $icon]):
+                        $isActive = ($filters['status'] === $key || ($key === 'all' && $filters['status'] === 'all'));
+                    ?>
+                        <a href="<?= url_e('/admin-dashboard' . $qs(['status' => $key === 'all' ? '' : $key])) ?>"
+                            aria-current="<?= $isActive ? 'true' : 'false' ?>"
+                            class="filter-pill tap-effect inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all
+                                  <?= $isActive
+                                        ? 'border-[#00A6A6] bg-[#00A6A6] text-white shadow-[0_0_12px_rgba(0,166,166,0.35)]'
+                                        : 'border-white/10 bg-white/5 text-gray-300 hover:border-[#00A6A6]/50 hover:text-white' ?>">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
+                            </svg>
+                            <span><?= $label ?></span>
+                        </a>
+                    <?php endforeach; ?>
                 </div>
-            </label>
+            </div>
+        </div>
 
-            <div class="flex items-end">
-                <button type="submit"
-                    class="tap-effect inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#00A6A6] px-6 text-sm font-bold text-white shadow-[0_0_15px_rgba(0,166,166,0.3)] transition-all hover:-translate-y-0.5 hover:bg-[#008c8c] hover:shadow-[0_0_25px_rgba(0,166,166,0.5)]">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <!-- Advanced filters (collapsible) -->
+        <details class="group border-t border-white/5" <?= $hasAdvanced ? 'open' : '' ?>>
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02] sm:px-5">
+                <span class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                     </svg>
-                    Filter
-                </button>
-            </div>
+                    Advanced filters
+                    <?php if ($advancedCount > 0): ?>
+                        <span class="rounded-full bg-[#00A6A6]/15 px-2 py-0.5 text-[10px] font-bold text-[#00A6A6]">
+                            <?= $advancedCount ?> active
+                        </span>
+                    <?php endif; ?>
+                </span>
+                <svg class="member-adv-chevron h-4 w-4 text-gray-500 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </summary>
 
-            <div class="flex items-end">
-                <a href="<?= url_e('/admin-dashboard/members/export' . $qs()) ?>"
-                    class="tap-effect inline-flex h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 text-xs font-bold text-gray-300 transition-all hover:-translate-y-0.5 hover:border-[#00A6A6] hover:text-white hover:shadow-md"
-                    download>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    CSV
-                </a>
+            <div class="space-y-5 border-t border-white/5 bg-[#0a0a0a]/30 px-4 py-4 sm:px-5">
+
+                <!-- Role -->
+                <div>
+                    <div class="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">Role</div>
+                    <div class="flex flex-wrap gap-2">
+                        <?php foreach ($roleFilters as [$key, $label, $count, $icon]):
+                            $isActive = ($filters['role'] === $key || ($key === 'all' && $filters['role'] === 'all'));
+                        ?>
+                            <a href="<?= url_e('/admin-dashboard' . $qs(['role' => $key === 'all' ? '' : $key])) ?>"
+                                aria-current="<?= $isActive ? 'true' : 'false' ?>"
+                                class="filter-pill inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all
+                                      <?= $isActive
+                                            ? 'border-[#00A6A6] bg-[#00A6A6] text-white'
+                                            : 'border-white/10 bg-white/5 text-gray-300 hover:border-[#00A6A6]/50 hover:text-white' ?>">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
+                                </svg>
+                                <?= $label ?>
+                                <span class="rounded-full bg-black/25 px-1.5 text-[10px] font-bold <?= $isActive ? 'text-white' : 'text-gray-400' ?>"><?= $count ?></span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <!-- Tier -->
+                <div>
+                    <div class="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">Tier</div>
+                    <div class="flex flex-wrap gap-2">
+                        <?php foreach ($tierFilters as [$key, $label, $icon]):
+                            $isActive = ($filters['tier'] === $key || ($key === 'all' && $filters['tier'] === 'all'));
+                        ?>
+                            <a href="<?= url_e('/admin-dashboard' . $qs(['tier' => $key === 'all' ? '' : $key])) ?>"
+                                aria-current="<?= $isActive ? 'true' : 'false' ?>"
+                                class="filter-pill inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all
+                                      <?= $isActive
+                                            ? 'border-[#00A6A6] bg-[#00A6A6] text-white'
+                                            : 'border-white/10 bg-white/5 text-gray-300 hover:border-[#00A6A6]/50 hover:text-white' ?>">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $icon ?>" />
+                                </svg>
+                                <?= $label ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <!-- Joined date -->
+                <div>
+                    <div class="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">Joined date</div>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label class="block">
+                            <span class="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-gray-500">From</span>
+                            <input type="date" name="joined_from" value="<?= e($filters['joined_from']) ?>"
+                                class="h-11 w-full rounded-xl border border-white/10 bg-[#0a0a0a] px-4 text-sm text-white outline-none transition-all focus:border-[#00A6A6] focus:ring-2 focus:ring-[#00A6A6]/20 [color-scheme:dark]">
+                        </label>
+                        <label class="block">
+                            <span class="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-gray-500">To</span>
+                            <input type="date" name="joined_to" value="<?= e($filters['joined_to']) ?>"
+                                class="h-11 w-full rounded-xl border border-white/10 bg-[#0a0a0a] px-4 text-sm text-white outline-none transition-all focus:border-[#00A6A6] focus:ring-2 focus:ring-[#00A6A6]/20 [color-scheme:dark]">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex flex-col-reverse gap-2 border-t border-white/5 pt-4 sm:flex-row sm:justify-end">
+                    <a href="<?= url_e('/admin-dashboard?tab=members') ?>"
+                        class="inline-flex h-11 items-center justify-center rounded-full border border-white/10 bg-transparent px-6 text-sm font-bold text-gray-300 transition-colors hover:bg-white/5 hover:text-white">
+                        Reset
+                    </a>
+                    <button type="submit"
+                        class="tap-effect inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#00A6A6] px-6 text-sm font-bold text-white shadow-[0_0_15px_rgba(0,166,166,0.3)] transition-all hover:-translate-y-0.5 hover:bg-[#008c8c]">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                        Apply filters
+                    </button>
+                </div>
             </div>
-        </div>
+        </details>
 
         <?= a11y_filter_close() ?>
 
-        <?php if (
-            $filters['search'] || $filters['joined_from'] || $filters['joined_to']
-            || $filters['role'] !== 'all' || $filters['tier'] !== 'all' || $filters['status'] !== 'all'
-        ): ?>
-            <div class="flex items-center justify-between pt-3 border-t border-white/5 text-xs">
-                <span class="text-gray-400" <?= a11y_live_region('polite') ?>>
-                    <strong class="text-white"><?= count($users) ?></strong> result<?= count($users) !== 1 ? 's' : '' ?> match the active filters
-                </span>
+        <!-- Active chips + live count -->
+        <?php if (!empty($activeChips)): ?>
+            <div class="flex flex-wrap items-center gap-2 border-t border-white/5 px-4 py-3 sm:px-5">
+                <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Active</span>
+
+                <?php foreach ($activeChips as $chip): ?>
+                    <a href="<?= url_e('/admin-dashboard' . $chip['clear']) ?>"
+                        class="group inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-gray-300 transition-all hover:border-[#D50000]/40 hover:bg-[#D50000]/10 hover:text-white"
+                        aria-label="Remove filter <?= e($chip['label']) ?>">
+                        <?= e($chip['label']) ?>
+                        <svg class="h-3 w-3 text-gray-500 transition-colors group-hover:text-[#D50000]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </a>
+                <?php endforeach; ?>
+
                 <a href="<?= url_e('/admin-dashboard?tab=members') ?>"
-                    class="font-bold text-[#00A6A6] transition-colors hover:text-white">
-                    Clear filters
+                    class="ml-auto text-[11px] font-bold text-[#00A6A6] transition-colors hover:text-white">
+                    Clear all
                 </a>
             </div>
         <?php endif; ?>
+
+        <!-- Live result count -->
+        <div class="flex items-center justify-between border-t border-white/5 px-4 py-2.5 text-xs text-gray-400 sm:px-5">
+            <span <?= a11y_live_region('polite') ?>>
+                <strong class="text-white"><?= count($users) ?></strong>
+                member<?= count($users) !== 1 ? 's' : '' ?>
+                <?= ($filters['search'] !== '' || $hasAdvanced) ? 'match the active filters' : 'total' ?>
+            </span>
+            <?php if ($filters['search'] !== '' || $hasAdvanced): ?>
+                <a href="<?= url_e('/admin-dashboard?tab=members') ?>" class="font-bold text-[#00A6A6] transition-colors hover:text-white">
+                    Reset view
+                </a>
+            <?php endif; ?>
+        </div>
     </form>
 
     <!-- ============================================================
@@ -326,7 +428,7 @@ $qs = function (array $overrides = []) use ($filters): string {
     <div class="overflow-hidden rounded-2xl border border-white/5 bg-[#111] shadow-sm">
         <div class="flex items-center justify-between border-b border-white/5 p-6">
             <div>
-                <h3 class="font-heading text-2xl tracking-wide text-white">ALL MEMBERS</h3>
+                <h2 class="font-heading text-2xl tracking-wide text-white">ALL MEMBERS</h2>
                 <p class="mt-1 text-xs text-gray-400">
                     <span <?= a11y_live_region('polite') ?>><?= count($users) ?> shown</span> · click any row to edit
                 </p>
@@ -457,54 +559,14 @@ $qs = function (array $overrides = []) use ($filters): string {
                                         : Enrollment::statusLabel($enrollStatus);
 
                                     $badgeStyles = match ($urgencyMap['key']) {
-                                        'active'    => [
-                                            'bg' => 'bg-green-500/10',
-                                            'text' => 'text-green-500',
-                                            'border' => 'border-green-500/20',
-                                            'icon' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
-                                        ],
-                                        'soon'      => [
-                                            'bg' => 'bg-amber-500/10',
-                                            'text' => 'text-amber-500',
-                                            'border' => 'border-amber-500/20',
-                                            'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'
-                                        ],
-                                        'urgent'    => [
-                                            'bg' => 'bg-red-500/10',
-                                            'text' => 'text-red-500',
-                                            'border' => 'border-red-500/20',
-                                            'icon' => 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'
-                                        ],
-                                        'expired'   => [
-                                            'bg' => 'bg-red-500/10',
-                                            'text' => 'text-red-500',
-                                            'border' => 'border-red-500/20',
-                                            'icon' => 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'
-                                        ],
-                                        'pending'   => [
-                                            'bg' => 'bg-amber-500/10',
-                                            'text' => 'text-amber-500',
-                                            'border' => 'border-amber-500/20',
-                                            'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'
-                                        ],
-                                        'paused'    => [
-                                            'bg' => 'bg-blue-500/10',
-                                            'text' => 'text-blue-400',
-                                            'border' => 'border-blue-500/20',
-                                            'icon' => 'M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z'
-                                        ],
-                                        'cancelled' => [
-                                            'bg' => 'bg-gray-500/10',
-                                            'text' => 'text-gray-400',
-                                            'border' => 'border-gray-500/20',
-                                            'icon' => 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636'
-                                        ],
-                                        default     => [
-                                            'bg' => 'bg-gray-500/10',
-                                            'text' => 'text-gray-400',
-                                            'border' => 'border-gray-500/20',
-                                            'icon' => 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
-                                        ],
+                                        'active'    => ['bg' => 'bg-green-500/10',  'text' => 'text-green-500',  'border' => 'border-green-500/20',  'icon' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+                                        'soon'      => ['bg' => 'bg-amber-500/10',  'text' => 'text-amber-500',  'border' => 'border-amber-500/20',  'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
+                                        'urgent'    => ['bg' => 'bg-red-500/10',    'text' => 'text-red-500',    'border' => 'border-red-500/20',    'icon' => 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'],
+                                        'expired'   => ['bg' => 'bg-red-500/10',    'text' => 'text-red-500',    'border' => 'border-red-500/20',    'icon' => 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'],
+                                        'pending'   => ['bg' => 'bg-amber-500/10',  'text' => 'text-amber-500',  'border' => 'border-amber-500/20',  'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
+                                        'paused'    => ['bg' => 'bg-blue-500/10',   'text' => 'text-blue-400',   'border' => 'border-blue-500/20',   'icon' => 'M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z'],
+                                        'cancelled' => ['bg' => 'bg-gray-500/10',   'text' => 'text-gray-400',   'border' => 'border-gray-500/20',   'icon' => 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636'],
+                                        default     => ['bg' => 'bg-gray-500/10',   'text' => 'text-gray-400',   'border' => 'border-gray-500/20',   'icon' => 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'],
                                     };
                                     ?>
                                     <span data-status-badge class="inline-flex items-center gap-1.5 rounded-full border <?= $badgeStyles['bg'] ?> <?= $badgeStyles['text'] ?> <?= $badgeStyles['border'] ?> px-3 py-1 text-[10px] font-bold uppercase">
@@ -611,7 +673,6 @@ $qs = function (array $overrides = []) use ($filters): string {
         <div class="w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#111] shadow-2xl"
             style="animation: modal-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);">
 
-            <!-- Modal header -->
             <div class="sticky top-0 z-10 flex items-center gap-4 border-b border-white/5 bg-[#111] p-6">
                 <div id="mm-avatar" class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#00A6A6] to-[#008c8c] font-heading text-2xl text-white shadow-md"
                     aria-hidden="true">
@@ -632,17 +693,13 @@ $qs = function (array $overrides = []) use ($filters): string {
                 </button>
             </div>
 
-            <!-- Modal body -->
             <form id="memberForm" method="post" action="<?= url_e('/admin-dashboard/members/update') ?>"
                 data-validate class="p-6 sm:p-8 space-y-6">
                 <?= csrf_field() ?>
                 <input type="hidden" name="id" id="mm-id">
 
-                <!-- ==== Section 1: Identity ==== -->
                 <fieldset class="rounded-2xl border border-white/5 bg-white/[0.02] p-5">
-                    <legend class="px-2 text-[10px] font-bold uppercase tracking-widest text-[#00A6A6]">
-                        Identity
-                    </legend>
+                    <legend class="px-2 text-[10px] font-bold uppercase tracking-widest text-[#00A6A6]">Identity</legend>
 
                     <div class="grid gap-4 sm:grid-cols-[140px_1fr]">
                         <label class="block">
@@ -706,7 +763,6 @@ $qs = function (array $overrides = []) use ($filters): string {
                         </label>
                     </div>
 
-                    <!-- Self-describe (conditional) -->
                     <label class="mt-4 block hidden" id="mm-self-describe-wrap">
                         <?= form_label('Self-described gender', true, 'How would you describe your gender?', 'M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z') ?>
                         <input name="gender_self_describe" id="mm-input-self-describe" maxlength="100"
@@ -717,11 +773,8 @@ $qs = function (array $overrides = []) use ($filters): string {
                     </label>
                 </fieldset>
 
-                <!-- ==== Section 2: Emergency Contact ==== -->
                 <fieldset class="rounded-2xl border border-white/5 bg-white/[0.02] p-5">
-                    <legend class="px-2 text-[10px] font-bold uppercase tracking-widest text-[#00A6A6]">
-                        Emergency Contact
-                    </legend>
+                    <legend class="px-2 text-[10px] font-bold uppercase tracking-widest text-[#00A6A6]">Emergency Contact</legend>
 
                     <div class="grid gap-4 sm:grid-cols-2">
                         <label class="block">
@@ -744,11 +797,8 @@ $qs = function (array $overrides = []) use ($filters): string {
                     </div>
                 </fieldset>
 
-                <!-- ==== Section 3: Account & Security ==== -->
                 <fieldset class="rounded-2xl border border-white/5 bg-white/[0.02] p-5">
-                    <legend class="px-2 text-[10px] font-bold uppercase tracking-widest text-[#00A6A6]">
-                        Account & Security
-                    </legend>
+                    <legend class="px-2 text-[10px] font-bold uppercase tracking-widest text-[#00A6A6]">Account & Security</legend>
 
                     <div class="grid gap-4 sm:grid-cols-2">
                         <label class="block">
@@ -771,10 +821,8 @@ $qs = function (array $overrides = []) use ($filters): string {
                     </div>
                 </fieldset>
 
-                <!-- Meta panel -->
                 <div id="mm-meta" class="rounded-2xl border border-white/5 bg-white/[0.02] p-4 text-xs text-gray-300 space-y-2"></div>
 
-                <!-- Actions -->
                 <div class="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
                     <button type="button" onclick="closeMemberModal()"
                         class="rounded-full border border-white/10 bg-transparent px-6 py-3 text-sm font-bold text-gray-300 transition-all hover:bg-white/5 hover:text-white">
@@ -862,6 +910,19 @@ $qs = function (array $overrides = []) use ($filters): string {
         }
     }
 
+    /* Native <details> marker hiding + chevron rotation */
+    #memberFilterForm summary::-webkit-details-marker {
+        display: none;
+    }
+
+    #memberFilterForm summary {
+        list-style: none;
+    }
+
+    #memberFilterForm details[open] .member-adv-chevron {
+        transform: rotate(180deg);
+    }
+
     @media (prefers-reduced-motion: reduce) {
 
         .member-row,
@@ -876,9 +937,6 @@ $qs = function (array $overrides = []) use ($filters): string {
     (function() {
         'use strict';
 
-        /* ============================================================
-         *  OPEN MEMBER MODAL
-         * ============================================================ */
         window.openMemberModal = function(u) {
             if (!u) return;
 
@@ -916,7 +974,6 @@ $qs = function (array $overrides = []) use ($filters): string {
                 sdInput.value = '';
             }
 
-            /* Meta panel */
             const meta = document.getElementById('mm-meta');
             const statusLabels = {
                 active: 'Active',
@@ -954,7 +1011,6 @@ $qs = function (array $overrides = []) use ($filters): string {
 
             meta.innerHTML = html;
 
-            /* Clear stale validation */
             const form = document.getElementById('memberForm');
             if (form) {
                 form.querySelectorAll('[data-field-error]').forEach(el => {
@@ -977,9 +1033,6 @@ $qs = function (array $overrides = []) use ($filters): string {
             document.getElementById('memberModal').classList.replace('flex', 'hidden');
         };
 
-        /* ============================================================
-         *  Self-describe toggle
-         * ============================================================ */
         document.getElementById('mm-input-gender')?.addEventListener('change', function() {
             const wrap = document.getElementById('mm-self-describe-wrap');
             const input = document.getElementById('mm-input-self-describe');
@@ -992,9 +1045,6 @@ $qs = function (array $overrides = []) use ($filters): string {
             }
         });
 
-        /* ============================================================
-         *  DELETE MODAL
-         * ============================================================ */
         window.openDeleteMemberModal = function(u) {
             if (!u) return;
             if (window.PMGZ_A11Y && window.PMGZ_A11Y.openModal) {
@@ -1009,9 +1059,6 @@ $qs = function (array $overrides = []) use ($filters): string {
             document.getElementById('deleteModal').classList.replace('flex', 'hidden');
         };
 
-        /* ============================================================
-         *  Prevent double-submit
-         * ============================================================ */
         document.getElementById('memberForm')?.addEventListener('submit', function(e) {
             const btn = document.getElementById('mm-submit');
             const icon = document.getElementById('mm-submit-icon');
@@ -1031,9 +1078,6 @@ $qs = function (array $overrides = []) use ($filters): string {
             }, 0);
         });
 
-        /* ============================================================
-         *  Esc + backdrop close
-         * ============================================================ */
         ['memberModal', 'deleteModal'].forEach(id => {
             document.getElementById(id)?.addEventListener('click', (e) => {
                 if (e.target.id === id) {
