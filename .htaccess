@@ -1,0 +1,26 @@
+RewriteEngine On
+# No RewriteBase: mod_rewrite derives it per-directory, so the same file works
+# whether the app is served from a subfolder or from the domain root (Render).
+
+# Never serve private folders or build/source files directly.
+RewriteRule ^(config|src|storage|tests|database|vendor|scripts|docs|shots|\.playwright-mcp|\.git)(/|$) - [F,L]
+
+Options -Indexes
+
+<FilesMatch "(^\.env.*|^\.dockerignore$|^\.gitignore$|^Dockerfile$|^start\.sh$|^router\.php$|\.(sql|log|md|lock)$|^composer\.json$|^docker-compose\.yml$)">
+    Require all denied
+</FilesMatch>
+
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+RewriteRule ^ index.php [L]
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Permissions-Policy "camera=(self), microphone=(), geolocation=(), payment=(), usb=()"
+    Header set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
+</IfModule>

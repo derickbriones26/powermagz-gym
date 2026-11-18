@@ -1,0 +1,7 @@
+.env
+.git
+.idea
+.vscode
+storage/logs/*
+storage/backups/*
+vendor/
