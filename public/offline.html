@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Offline — PowerMagz Gym</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: #050505;
+            color: #fff;
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        }
+        .glow {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 400px;
+            height: 400px;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background: rgba(0, 166, 166, .1);
+            filter: blur(100px);
+            pointer-events: none;
+        }
+        .card {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 420px;
+            padding: 40px 32px;
+            text-align: center;
+            background: #111;
+            border: 1px solid rgba(255, 255, 255, .06);
+            border-radius: 24px;
+            box-shadow: 0 30px 60px -30px rgba(0, 0, 0, .9);
+        }
+        .icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .05);
+            color: #9ca3af;
+        }
+        h1 {
+            margin: 0;
+            font-size: 44px;
+            letter-spacing: .18em;
+            font-weight: 800;
+        }
+        h2 { margin: 8px 0 0; font-size: 20px; }
+        p {
+            margin: 12px 0 0;
+            color: #9ca3af;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        button {
+            margin-top: 30px;
+            width: 100%;
+            padding: 14px 20px;
+            border: 0;
+            border-radius: 999px;
+            background: #00A6A6;
+            color: #fff;
+            font: 700 14px/1 system-ui, sans-serif;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 166, 166, .4);
+        }
+        button:hover { background: #008c8c; }
+    </style>
+</head>
+
+<body>
+    <div class="glow"></div>
+    <div class="card">
+        <div class="icon">
+            <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414" />
+            </svg>
+        </div>
+        <h1>OFFLINE</h1>
+        <h2>No Internet Connection</h2>
+        <p>It looks like you've lost your Wi-Fi or mobile data. Please check your connection and try again.</p>
+        <button type="button" onclick="window.location.reload()">Try Again</button>
+    </div>
+</body>
+
+</html>

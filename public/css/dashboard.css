@@ -1,0 +1,492 @@
+/* ==========================================================================
+   PowerMagz — Member dashboard motion + finish
+   Loaded only on /home. Motion is transform/opacity first, 140–340ms,
+   and every animation is opt-out via prefers-reduced-motion.
+   ========================================================================== */
+
+.member-dashboard {
+    --dash-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --dash-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --dash-dur-press: 140ms;
+    --dash-dur-fast: 200ms;
+    --dash-dur-base: 280ms;
+    --dash-dur-slow: 340ms;
+    --dash-accent: #00A6A6;
+}
+
+.member-dashboard a:focus-visible,
+.member-dashboard button:focus-visible {
+    outline: 2px solid var(--dash-accent);
+    outline-offset: 3px;
+}
+
+/* --------------------------------------------------------------------------
+   Hero
+   -------------------------------------------------------------------------- */
+
+.dash-hero {
+    isolation: isolate;
+}
+
+.dash-hero-media {
+    background-size: cover;
+    background-position: center 10%;
+    opacity: 0.42;
+    filter: saturate(0.92) contrast(1.04);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.35) 34%, #000 74%);
+    mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.35) 34%, #000 74%);
+}
+
+.dash-hero-shade {
+    background: linear-gradient(90deg,
+            rgba(10, 10, 10, 0.98) 0%,
+            rgba(10, 10, 10, 0.9) 42%,
+            rgba(10, 10, 10, 0.38) 100%);
+}
+
+@media (max-width: 639px) {
+    .dash-hero-media {
+        opacity: 0.34;
+        background-position: 66% 12%;
+        -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 55%);
+        mask-image: linear-gradient(180deg, transparent 0%, #000 55%);
+    }
+
+    .dash-hero-shade {
+        background: linear-gradient(180deg,
+                rgba(10, 10, 10, 0.42) 0%,
+                rgba(10, 10, 10, 0.88) 62%,
+                #0a0a0a 100%);
+    }
+}
+
+.dash-beam {
+    width: 88px;
+    height: 2px;
+    margin-top: 14px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--dash-accent), rgba(0, 166, 166, 0));
+    transform-origin: left center;
+}
+
+.dash-link-arrow {
+    display: inline-block;
+    transition: transform 160ms var(--dash-ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .dash-link:hover .dash-link-arrow {
+        transform: translateX(3px);
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Entrance choreography — one section at a time, 45–70ms apart.
+   Runs off the main thread; content is visible when motion is reduced.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: no-preference) {
+    .dash-reveal,
+    .dash-item {
+        /* backwards, not both: once the entrance ends the element must hand its
+           transform back so hover lift and press scale can take over. */
+        animation: dash-rise var(--dash-dur-slow) var(--dash-ease-out) backwards;
+        animation-delay: calc(var(--reveal-delay, 0ms) + var(--item-i, 0) * 45ms);
+    }
+
+    .dash-beam {
+        animation: dash-beam-in 480ms var(--dash-ease-out) 220ms backwards;
+    }
+
+    .dash-progress {
+        animation: dash-progress-draw 760ms var(--dash-ease-out) 380ms backwards;
+    }
+
+    .id-modal.is-open .id-qr::after {
+        animation: id-scan 1100ms var(--dash-ease-in-out) 320ms both;
+    }
+}
+
+@keyframes dash-rise {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 14px, 0);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes dash-beam-in {
+    from {
+        opacity: 0;
+        transform: scaleX(0);
+    }
+
+    to {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+}
+
+@keyframes dash-progress-draw {
+    from {
+        clip-path: inset(0 100% 0 0);
+    }
+}
+
+/* Primary action spans two columns below the 7-across desktop layout.
+   Phone: full width (2 of 2). Tablet: 2 of 4, so seven actions fill two
+   complete rows instead of leaving a hole. */
+@media (max-width: 1279px) {
+    .quick-primary {
+        grid-column: span 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+    }
+
+    .quick-primary .dash-action-icon {
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    .quick-primary .quick-primary-label {
+        margin-top: 0;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Cards, actions, buttons
+   -------------------------------------------------------------------------- */
+
+.dash-card {
+    -webkit-tap-highlight-color: transparent;
+    transition:
+        transform var(--dash-dur-fast) var(--dash-ease-out),
+        border-color var(--dash-dur-fast) ease,
+        background-color var(--dash-dur-fast) ease;
+}
+
+.dash-card-static {
+    -webkit-tap-highlight-color: transparent;
+}
+
+.dash-accent {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    pointer-events: none;
+    opacity: 0;
+    transform: scaleX(0);
+    transform-origin: left center;
+    background: linear-gradient(90deg, transparent, rgba(0, 166, 166, 0.75), transparent);
+    transition:
+        transform var(--dash-dur-base) var(--dash-ease-out),
+        opacity var(--dash-dur-fast) ease;
+}
+
+.dash-icon {
+    transform-origin: center;
+    transition:
+        transform var(--dash-dur-base) var(--dash-ease-out),
+        background-color var(--dash-dur-fast) ease,
+        color var(--dash-dur-fast) ease;
+}
+
+.dash-action {
+    -webkit-tap-highlight-color: transparent;
+    transition:
+        transform var(--dash-dur-fast) var(--dash-ease-out),
+        border-color var(--dash-dur-fast) ease,
+        background-color var(--dash-dur-fast) ease;
+}
+
+.dash-action-icon {
+    transform-origin: center;
+    transition:
+        transform var(--dash-dur-base) var(--dash-ease-out),
+        background-color var(--dash-dur-fast) ease,
+        color var(--dash-dur-fast) ease;
+}
+
+.dash-btn,
+.dash-chip {
+    -webkit-tap-highlight-color: transparent;
+    transition:
+        transform var(--dash-dur-press) var(--dash-ease-out),
+        background-color var(--dash-dur-fast) ease,
+        border-color var(--dash-dur-fast) ease,
+        color var(--dash-dur-fast) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+    .dash-card:hover {
+        transform: translate3d(0, -3px, 0);
+        border-color: rgba(0, 166, 166, 0.4);
+    }
+
+    .dash-card.dash-card-alert:hover {
+        border-color: rgba(239, 68, 68, 0.45);
+    }
+
+    .dash-card:hover .dash-accent,
+    .dash-action:hover .dash-accent {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+
+    .dash-card:hover .dash-icon {
+        transform: scale(1.07) rotate(-3deg);
+        background-color: rgba(0, 166, 166, 0.12);
+    }
+
+    .dash-action:hover {
+        transform: translate3d(0, -4px, 0);
+        border-color: rgba(0, 166, 166, 0.4);
+        background-color: #151515;
+    }
+
+    .dash-action:hover .dash-action-icon {
+        transform: scale(1.08) rotate(-4deg);
+        background-color: var(--dash-accent);
+        color: #fff;
+    }
+}
+
+/* Press states come after hover so they always win while the pointer is down. */
+.dash-card:active {
+    transform: scale(0.985);
+    transition-duration: var(--dash-dur-press);
+}
+
+.dash-action:active {
+    transform: scale(0.97);
+    transition-duration: var(--dash-dur-press);
+}
+
+.dash-btn:active,
+.dash-chip:active {
+    transform: scale(0.96);
+}
+
+/* --------------------------------------------------------------------------
+   Membership progress — clip-path reveal keeps the rounded edge intact.
+   -------------------------------------------------------------------------- */
+
+.dash-progress {
+    width: 100%;
+    clip-path: inset(0 calc(100% - var(--progress, 0%)) 0 0);
+}
+
+/* --------------------------------------------------------------------------
+   Digital ID modal + QR scan pass
+   -------------------------------------------------------------------------- */
+
+.id-modal {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        opacity var(--dash-dur-fast) ease,
+        visibility 0s linear var(--dash-dur-fast);
+}
+
+.id-modal.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity var(--dash-dur-fast) ease;
+}
+
+.id-card {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0) scale(0.96);
+    transition:
+        opacity 180ms ease,
+        transform var(--dash-dur-base) var(--dash-ease-out);
+}
+
+.id-modal.is-open .id-card {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+}
+
+.id-qr {
+    position: relative;
+    overflow: hidden;
+}
+
+.id-qr::after {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    height: 2px;
+    border-radius: 2px;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(90deg,
+            transparent,
+            #00A6A6 18%,
+            #a8ffff 50%,
+            #00A6A6 82%,
+            transparent);
+    box-shadow: 0 0 12px rgba(0, 166, 166, 0.8);
+}
+
+@keyframes id-scan {
+    0% {
+        opacity: 0;
+        transform: translateY(0);
+    }
+
+    12% {
+        opacity: 1;
+    }
+
+    88% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(156px);
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Live occupancy
+   -------------------------------------------------------------------------- */
+
+.occ-count {
+    display: inline-block;
+    font-variant-numeric: tabular-nums;
+    transform-origin: left bottom;
+    transition: transform var(--dash-dur-fast) var(--dash-ease-out);
+}
+
+.occ-count.is-bumping {
+    transform: scale(1.06);
+}
+
+.occ-bar {
+    width: 100%;
+    clip-path: inset(0 calc(100% - var(--occ-pct, 0%)) 0 0);
+    transition: clip-path 700ms var(--dash-ease-out);
+}
+
+#occ-content:not(.hidden) {
+    animation: dash-fade-in 260ms ease both;
+}
+
+@keyframes dash-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.occ-refresh-icon {
+    transform-origin: center;
+}
+
+.occ-refresh.is-refreshing .occ-refresh-icon {
+    animation: dash-spin 700ms linear infinite;
+}
+
+@keyframes dash-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion: keep color/state feedback, drop movement.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .member-dashboard .animate-ping,
+    .member-dashboard .animate-pulse,
+    .id-modal .animate-pulse {
+        animation: none !important;
+    }
+
+    .dash-reveal,
+    .dash-item,
+    .dash-beam,
+    .dash-progress,
+    .id-modal.is-open .id-qr::after,
+    #occ-content:not(.hidden) {
+        animation: none !important;
+    }
+
+    .id-card,
+    .id-modal.is-open .id-card {
+        transform: none;
+        transition-duration: 0.01ms !important;
+    }
+
+    .member-dashboard .dash-icon-static,
+    .id-modal .id-close-icon {
+        transition-duration: 0.01ms !important;
+    }
+
+    .member-dashboard .group:hover .dash-icon-static,
+    .id-modal .group:hover .id-close-icon {
+        transform: none !important;
+    }
+
+    .dash-beam {
+        opacity: 1;
+        transform: none;
+    }
+
+    .dash-progress {
+        clip-path: inset(0 calc(100% - var(--progress, 0%)) 0 0);
+    }
+
+    .dash-card,
+    .dash-action,
+    .dash-btn,
+    .dash-chip,
+    .dash-icon,
+    .dash-action-icon,
+    .dash-link-arrow {
+        transition-duration: 0.01ms !important;
+    }
+
+    .dash-card:hover,
+    .dash-action:hover,
+    .dash-card:active,
+    .dash-action:active,
+    .dash-btn:active,
+    .dash-chip:active {
+        transform: none;
+    }
+
+    .occ-refresh.is-refreshing .occ-refresh-icon {
+        animation: dash-opacity-pulse 900ms ease-in-out infinite alternate;
+    }
+}
+
+@keyframes dash-opacity-pulse {
+    from {
+        opacity: 0.45;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
