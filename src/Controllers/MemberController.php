@@ -70,20 +70,23 @@ class MemberController extends Controller
     {
         $user = current_user();
 
-        $requests = array_map(function (array $r) {
-            $profile = PartnerProfile::first(['user_id' => $r['partner_user_id']]);
-            $partner = User::find($r['partner_user_id']);
-            $r['partner_name'] = ($profile['business_name'] ?? '')
-                ?: ($partner['full_name'] ?? 'A PowerMagz coach');
-            return $r;
-        }, B2BClient::where([
-            'client_email'      => $user['email'],
-            'membership_status' => 'pending',
-        ], 'created_date DESC'));
+        $withPartner = function (string $status) use ($user): array {
+            return array_map(function (array $r) {
+                $profile = PartnerProfile::first(['user_id' => $r['partner_user_id']]);
+                $partner = User::find($r['partner_user_id']);
+                $r['partner_name'] = ($profile['business_name'] ?? '')
+                    ?: ($partner['full_name'] ?? 'A PowerMagz coach');
+                return $r;
+            }, B2BClient::where([
+                'client_email'      => $user['email'],
+                'membership_status' => $status,
+            ], 'created_date DESC'));
+        };
 
         $this->view('member/coach_requests', [
-            'pageTitle' => 'Coach Requests',
-            'requests'  => $requests,
+            'pageTitle' => 'My Coaches',
+            'requests'  => $withPartner('pending'),
+            'coaches'   => $withPartner('linked'),
         ], 'portal');
     }
 
