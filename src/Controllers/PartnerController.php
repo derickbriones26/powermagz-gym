@@ -157,6 +157,29 @@ class PartnerController extends Controller
         $this->redirect('/partner-dashboard/clients');
     }
 
+    public function removeClient(): void
+    {
+        csrf_verify();
+        $user = current_user();
+        $id   = (string)$this->input('id');
+
+        // Ownership check: a partner may only remove their own clients.
+        $client = B2BClient::first([
+            'id'              => $id,
+            'partner_user_id' => $user['id'],
+        ]);
+
+        if (!$client) {
+            flash('error', 'Client not found or not linked to your account.');
+            $this->redirect('/partner-dashboard/clients');
+        }
+
+        B2BClient::delete($id);
+
+        flash('success', 'Client removed from your list.');
+        $this->redirect('/partner-dashboard/clients');
+    }
+
     public function messageClient(): void
     {
         csrf_verify();

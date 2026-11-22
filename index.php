@@ -97,6 +97,7 @@ $router->post('/api/member/ai-coach',       'MemberController@apiAiCoach',      
 $router->get('/partner-dashboard',          'PartnerController@dashboard',       ['auth', 'role:partner,admin']);
 $router->get('/partner-dashboard/clients',  'PartnerController@clients',         ['auth', 'role:partner,admin']);
 $router->post('/partner-dashboard/clients', 'PartnerController@addClient',       ['auth', 'role:partner,admin']);
+$router->post('/partner-dashboard/clients/remove', 'PartnerController@removeClient', ['auth', 'role:partner,admin']);
 $router->post('/partner-dashboard/message-client', 'PartnerController@messageClient', ['auth', 'role:partner,admin']);
 $router->get('/partner-dashboard/sales',    'PartnerController@sales',           ['auth', 'role:partner,admin']);
 $router->post('/partner-dashboard/sales',   'PartnerController@logSale',         ['auth', 'role:partner,admin']);
