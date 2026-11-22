@@ -8,6 +8,8 @@ use App\Models\PartnerSale;
 use App\Models\PayoutRequest;
 use App\Models\B2BClient;
 use App\Models\Attendance;
+use App\Models\User;
+use App\Config\Database;
 
 class PartnerController extends Controller
 {
@@ -134,6 +136,22 @@ class PartnerController extends Controller
             'client_email'      => $email,
             'membership_status' => 'pending',
         ]);
+
+        // Notify the member if that email already has an account.
+        if ($member = User::findByEmail($email)) {
+            try {
+                Database::pdo()->prepare("
+                    INSERT INTO `notifications` (`user_id`, `tone`, `title`, `description`, `link`)
+                    VALUES (?, 'info', ?, ?, '/home')
+                ")->execute([
+                    $member['id'],
+                    'A coach added you as a client',
+                    ($user['full_name'] ?: 'A PowerMagz partner') . ' linked your account as one of their clients.',
+                ]);
+            } catch (\Throwable $e) {
+                error_log('[addClient notification] ' . $e->getMessage());
+            }
+        }
 
         flash('success', 'Client link request sent.');
         $this->redirect('/partner-dashboard/clients');
