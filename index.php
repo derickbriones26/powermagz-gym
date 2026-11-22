@@ -79,6 +79,8 @@ $router->get('/classes',          'MemberController@classes',     ['auth']);
 $router->post('/classes/book',    'MemberController@bookClass',   ['auth']);
 $router->post('/classes/cancel',  'MemberController@cancelClass', ['auth']);
 $router->get('/recommender',      'MemberController@recommender', ['auth']);
+$router->get('/coach-requests',   'MemberController@coachRequests',       ['auth']);
+$router->post('/coach-requests',  'MemberController@respondCoachRequest', ['auth']);
 $router->get('/ai-coach',         'MemberController@aiCoach',     ['auth']);
 $router->post('/ai-coach',        'MemberController@aiCoachAsk',  ['auth']);
 /* ====================== JSON API — MEMBER ====================== */

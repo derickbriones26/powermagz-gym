@@ -11,6 +11,8 @@ use App\Models\Attendance;
 use App\Models\GymClass;
 use App\Models\ClassBooking;
 use App\Models\User;
+use App\Models\B2BClient;
+use App\Models\PartnerProfile;
 use App\Config\Database;
 
 class MemberController extends Controller
@@ -62,6 +64,57 @@ class MemberController extends Controller
             'balance'   => $balance,
             'firstName' => explode(' ', $user['full_name'] ?: $user['email'])[0],
         ], 'portal');
+    }
+
+    public function coachRequests(): void
+    {
+        $user = current_user();
+
+        $requests = array_map(function (array $r) {
+            $profile = PartnerProfile::first(['user_id' => $r['partner_user_id']]);
+            $partner = User::find($r['partner_user_id']);
+            $r['partner_name'] = ($profile['business_name'] ?? '')
+                ?: ($partner['full_name'] ?? 'A PowerMagz coach');
+            return $r;
+        }, B2BClient::where([
+            'client_email'      => $user['email'],
+            'membership_status' => 'pending',
+        ], 'created_date DESC'));
+
+        $this->view('member/coach_requests', [
+            'pageTitle' => 'Coach Requests',
+            'requests'  => $requests,
+        ], 'portal');
+    }
+
+    public function respondCoachRequest(): void
+    {
+        csrf_verify();
+        $user = current_user();
+        $id     = (string)$this->input('id');
+        $action = (string)$this->input('action');
+
+        // Ownership check: only a pending request addressed to this member's email.
+        $request = B2BClient::first([
+            'id'                => $id,
+            'client_email'      => $user['email'],
+            'membership_status' => 'pending',
+        ]);
+
+        if (!$request) {
+            flash('error', 'That coach request is no longer available.');
+            $this->redirect('/coach-requests');
+        }
+
+        if ($action === 'accept') {
+            B2BClient::linkToUser($id, (string)$user['id']);
+            flash('success', 'Coach request accepted — you are now linked to your coach.');
+        } elseif ($action === 'decline') {
+            B2BClient::updateClient($id, ['membership_status' => 'inactive']);
+            flash('success', 'Coach request declined.');
+        }
+
+        $this->redirect('/coach-requests');
     }
 
     public function programs(): void

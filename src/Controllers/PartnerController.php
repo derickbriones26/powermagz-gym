@@ -142,7 +142,7 @@ class PartnerController extends Controller
             try {
                 Database::pdo()->prepare("
                     INSERT INTO `notifications` (`user_id`, `tone`, `title`, `description`, `link`)
-                    VALUES (?, 'info', ?, ?, '/home')
+                    VALUES (?, 'info', ?, ?, '/coach-requests')
                 ")->execute([
                     $member['id'],
                     'A coach added you as a client',
