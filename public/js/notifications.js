@@ -59,16 +59,19 @@
       const meta = toneMeta[n.tone] || toneMeta.info;
       const title = escapeHtml(n.title || n.action || 'Notification');
       const desc = escapeHtml(n.description || n.desc || n.notes || '');
-      return `
-        <div class="flex items-start gap-3 p-4 ${i > 0 ? 'border-t border-white/10' : ''} transition-colors hover:bg-white/[0.02]">
+      const body = `
           <div class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${meta.bg}">
             ${meta.icon}
           </div>
           <div class="min-w-0 flex-1">
             <div class="text-sm font-bold leading-snug break-words" style="color: #ffffff !important;">${title}</div>
             <div class="mt-1 text-xs leading-relaxed break-words" style="color: #9ca3af !important;">${desc}</div>
-          </div>
-        </div>`;
+          </div>`;
+      const cls = `flex items-start gap-3 p-4 ${i > 0 ? 'border-t border-white/10' : ''} transition-colors hover:bg-white/[0.02]`;
+      // Links are stored app-relative, so prefix the meta base (works in a subfolder too).
+      return n.link
+        ? `<a href="${escapeHtml(base + n.link)}" class="${cls}">${body}</a>`
+        : `<div class="${cls}">${body}</div>`;
     }).join('');
   }
 
